@@ -32,6 +32,9 @@ db.init_app(app)
 bcrypt.init_app(app)
 jwt = JWTManager(app)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
 # EXCEL_FILE = "D:/Anurag/Office/KVQA KAF Data Upload Application/Data1.xlsx"     # path to your Excel file
 # SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1fzYnnOKHt3houEzNolPJKEw9PIKJkvDJbfcmKgUIjQs/export?format=csv&gid=0"     # path to your SPREADSHEET file
 TEMPLATE_FILE = "D:/Anurag/Office/KVQA KAF Data Upload Application/backend/templates/template.docx"  # path to your Word template
@@ -266,9 +269,9 @@ def generate_docx(file_id, row_id):
 
         # Pick template file
         if template_type == "template1":
-            template_file = "D:/Anurag/Office/KVQA KAF Data Upload Application/backend/templates/template1.docx"
+            template_file = os.path.join(TEMPLATES_DIR, "template1.docx")
         else:
-            template_file = "D:/Anurag/Office/KVQA KAF Data Upload Application/backend/templates/template2.docx"
+            template_file = os.path.join(TEMPLATES_DIR, "template2.docx")
 
         # Find the uploaded file for this user
         user_file = UserFile.query.filter_by(
