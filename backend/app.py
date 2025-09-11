@@ -9,17 +9,23 @@ import pandas as pd
 import traceback
 import numpy as np
 from xml.sax.saxutils import escape
+from dotenv import load_dotenv
 
-
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True,)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_SECRET_KEY"] = "anuragiitmadras"
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
+# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# app.config["SQLALCHEMY_SECRET_KEY"] = "anuragiitmadras"
 
-app.config["JWT_SECRET_KEY"] = "super-secret-key"  # change in production
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL')  # Use full URL from Render
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
 
 db.init_app(app)
