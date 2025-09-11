@@ -471,6 +471,14 @@ def download_generated_file(file_name):
     file_path = os.path.join(OUTPUT_DIR, file_name)
     return send_file(file_path, as_attachment=True)
 
+@app.route("/init-db")
+def init_db():
+    try:
+        db.create_all()
+        return {"message": "Database initialized successfully!"}
+    except Exception as e:
+        return {"error": str(e)}, 500
+
 
 if __name__ == "__main__":
     with app.app_context():
