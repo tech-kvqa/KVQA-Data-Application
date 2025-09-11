@@ -76,7 +76,8 @@ export default {
       }
 
       try {
-        await axios.post("http://127.0.0.1:5000/register", {
+        // await axios.post("http://127.0.0.1:5000/register", {
+        await axios.post("https://kvqa-data-application.onrender.com/register", {
           username: this.username,
           password: this.password
         });

@@ -48,7 +48,8 @@ export default {
       this.message = "";
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://127.0.0.1:5000/generated-docs", {
+        // const res = await axios.get("http://127.0.0.1:5000/generated-docs", {
+        const res = await axios.get("https://kvqa-data-application.onrender.com/generated-docs", {
           headers: { Authorization: `Bearer ${token}` }
         });
         this.generatedDocs = res.data;  // Backend already filters by user_id
@@ -64,7 +65,8 @@ export default {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          `http://127.0.0.1:5000/download-generated-file/${fileName}`,
+          // `http://127.0.0.1:5000/download-generated-file/${fileName}`,
+          `https://kvqa-data-application.onrender.com/download-generated-file/${fileName}`,
           { headers: { Authorization: `Bearer ${token}` }, responseType: "blob" }
         );
 

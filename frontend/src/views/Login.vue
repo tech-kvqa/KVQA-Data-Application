@@ -69,7 +69,8 @@ export default {
     async loginUser() {
       this.error = "";
       try {
-        const res = await axios.post("http://127.0.0.1:5000/login", {
+        // const res = await axios.post("http://127.0.0.1:5000/login", {
+        const res = await axios.post("https://kvqa-data-application.onrender.com/login", {
           username: this.username,
           password: this.password
         });

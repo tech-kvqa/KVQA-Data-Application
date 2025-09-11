@@ -630,7 +630,8 @@ export default {
         formData.append("file", this.selectedFile);
 
         const res = await axios.post(
-          "http://127.0.0.1:5000/upload-file",
+          // "http://127.0.0.1:5000/upload-file",
+          "https://kvqa-data-application.onrender.com/upload-file",
           formData,
           {
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
@@ -654,7 +655,8 @@ export default {
     async fetchUserFiles() {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://127.0.0.1:5000/my-files", {
+        // const res = await axios.get("http://127.0.0.1:5000/my-files", {
+        const res = await axios.get("https://kvqa-data-application.onrender.com/my-files", {
           headers: { Authorization: `Bearer ${token}` }
         });
         this.userFiles = res.data;
@@ -666,7 +668,8 @@ export default {
     async fetchCurrentUserGeneratedRows() {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://127.0.0.1:5000/generated-docs", {
+        // const res = await axios.get("http://127.0.0.1:5000/generated-docs", {
+        const res = await axios.get("https://kvqa-data-application.onrender.com/generated-docs", {
           headers: { Authorization: `Bearer ${token}` }
         });
         // Store row_ids of current user for freeze logic
@@ -683,7 +686,8 @@ export default {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          `http://127.0.0.1:5000/excel-rows/${this.selectedFileId}`,
+          // `http://127.0.0.1:5000/excel-rows/${this.selectedFileId}`,
+          `https://kvqa-data-application.onrender.com/excel-rows/${this.selectedFileId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -742,7 +746,8 @@ export default {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          `http://127.0.0.1:5000/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
+          // `http://127.0.0.1:5000/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
+          `https://kvqa-data-application.onrender.com/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
           { headers: { Authorization: `Bearer ${token}` }, responseType: "blob" }
         );
 
