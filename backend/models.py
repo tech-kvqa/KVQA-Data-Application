@@ -29,16 +29,16 @@ class User(db.Model):
 #     file_name = db.Column(db.String(255), nullable=False)
 #     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class GeneratedDoc(db.Model):
-    __tablename__ = "generated_docs"
+# class GeneratedDoc(db.Model):
+#     __tablename__ = "generated_docs"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    row_id = db.Column(db.Integer, nullable=False)
-    file_name = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+#     row_id = db.Column(db.Integer, nullable=False)
+#     file_name = db.Column(db.String(255), nullable=False)
+#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship("User", backref="generated_docs")
+#     user = db.relationship("User", backref="generated_docs")
 
 
 class UserFile(db.Model):
@@ -50,6 +50,20 @@ class UserFile(db.Model):
     file_path = db.Column(db.String(500), nullable=True)  # optional if downloaded
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     source_type = db.Column(db.String(20), default="uploaded")  # uploaded / downloaded
+    category = db.Column(db.String(50), nullable=False)
+
 
     user = db.relationship("User", backref="files")
+
+
+class GeneratedDoc(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    row_id = db.Column(db.Integer, nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    file_data = db.Column(db.LargeBinary, nullable=False)  # Store bytes here
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="generated_docs")
 
