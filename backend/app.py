@@ -313,19 +313,18 @@ CATEGORY_TEMPLATES = {
 
 CATEGORY_COLUMNS = {
     "QMS": [
-        'S.No', 'Certificate_No', 'Certificate_Issue_Date', 'Surveillance_1_date', 
-        'Surveillance_2_date', 'certification_audit_conducted', 'Verification_Date', 
-        'Organization_Name', 'Address', 'Temp_Address', 'Scope_s', 'Director_Name', 'MR_Name', 
-        'IAF_CODE', 'MANDAY', 'stage_1_manday', 'stage_2_manday', 'Surveillance_Manday', 
-        'Risk_Category', 'NO_OF_EMPLOYEE', 'audit_number', 'phone_number', 'mail_id', 'Lead_Auditor', 
-        'Auditor', 'Verification_Auditor', 'Stage_1_Date', 'stage_1_schedule_date', 'Stage_2_Date', 
-        'stage_2_schedule_date', 'Starting_Date', 'manual_date', 'manual_number', 'procedure_number', 
-        'Questionnaire_date', 'Quotation_date', 'contract_review_Date', 'quotation_number', 
-        'Internal_Audit_NO', 'Internal_Auditor_name', 'Auditor_Qualification', 'Non_conformity', 
-        'Internal_Audit_Date', 'MRM_Date', 'MRM_NO', 'MRM_Agenda', 'INTERNAL_ISSUE_NO', 'INTERNAL_ISSUE', 
-        'EXTERNAL_ISSUE', 'interested_parties_NO', 'interested_parties', 'PROCESS', 'Key_process', 
-        'objective_NO', 'QUALITY_OBJECTIVE_CO', 'legal_REGISTER_NO', 'legal_LICENSE', 'risk_register_NO', 
-        'risk_AND_MITIGATION'
+        'S.No', 'Certificate_No', 'Certificate_Issue_Date', 'Surveillance_1_date', 'Surveillance_2_date',
+        'certification_audit_conducted', 'Verification_Date', 'Organization_Name', 'Address', 
+        'Temp_Address', 'Temp_manday', 'Scope_s', 'Director_Name', 'MR_Name', 'IAF_CODE', 'MANDAY', 
+        'stage_1_manday', 'stage_2_manday', 'Surveillance_Manday', 'Risk_Category', 'NO_OF_EMPLOYEE', 
+        'audit_number', 'phone_number', 'mail_id', 'Lead_Auditor', 'Auditor', 'Verification_Auditor', 
+        'Stage_1_Date', 'stage_1_schedule_date', 'Stage_2_Date', 'stage_2_schedule_date', 'Starting_Date', 
+        'manual_date', 'manual_number', 'procedure_number', 'Questionnaire_date', 'Quotation_date', 
+        'contract_review_Date', 'quotation_number', 'Internal_Audit_NO', 'Internal_Auditor_name', 
+        'Auditor_Qualification', 'Non_conformity', 'Internal_Audit_Date', 'MRM_Date', 'MRM_NO', 
+        'MRM_Agenda', 'INTERNAL_ISSUE_NO', 'INTERNAL_ISSUE', 'EXTERNAL_ISSUE', 'interested_parties_NO', 
+        'interested_parties', 'PROCESS', 'Key_process', 'objective_NO', 'QUALITY_OBJECTIVE_CO', 
+        'legal_REGISTER_NO', 'legal_LICENSE', 'risk_register_NO', 'risk_AND_MITIGATION', 'Planning_the_stage_2'
     ],
     "EMS": [
         'S.No', 'Certificate_No', 'Certificate_Issue_Date', 'Surveillance_1_date', 
