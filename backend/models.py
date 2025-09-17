@@ -11,6 +11,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)  # hashed password
+    role = db.Column(db.String(20), default="user")
 
     def set_password(self, raw_password):
         """Hash and set password"""
@@ -19,7 +20,6 @@ class User(db.Model):
     def check_password(self, raw_password):
         """Verify password"""
         return bcrypt.check_password_hash(self.password, raw_password)
-
 
 # class GeneratedDoc(db.Model):
 #     __tablename__ = "generated_docs"
