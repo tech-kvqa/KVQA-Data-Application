@@ -314,7 +314,7 @@ CATEGORY_TEMPLATES = {
 CATEGORY_COLUMNS = {
     "QMS": [
         'S.No', 'Certificate_No', 'Certificate_Issue_Date', 'Surveillance_1_date', 'Surveillance_2_date',
-        'certification_audit_conducted', 'Verification_Date', 'Organization_Name', 'Address', 
+        'certification_audit_conducted', 'Closure_Date', 'Organization_Name', 'Address', 
         'Temp_Address', 'Temp_manday', 'Scope_s', 'Director_Name', 'MR_Name', 'IAF_CODE', 'MANDAY', 
         'stage_1_manday', 'stage_2_manday', 'Surveillance_Manday', 'Risk_Category', 'NO_OF_EMPLOYEE', 
         'audit_number', 'phone_number', 'mail_id', 'Lead_Auditor', 'Auditor', 'Verification_Auditor', 
@@ -328,7 +328,7 @@ CATEGORY_COLUMNS = {
     ],
     "EMS": [
         'S.No', 'Certificate_No', 'Certificate_Issue_Date', 'Surveillance_1_date', 
-        'Surveillance_2_date', 'certification_audit_conducted', 'Verification_Date', 
+        'Surveillance_2_date', 'certification_audit_conducted', 'Closure_Date', 
         'Organization_Name', 'Address', 'Temp_Address', 'Temp_manday', 'Scope_s', 
         'Director_Name', 'MR_Name', 'IAF_CODE', 'MANDAY', 'stage_1_manday', 'stage_2_manday', 
         'Surveillance_Manday', 'Risk_Category', 'NO_OF_EMPLOYEE', 'audit_number', 'phone_number', 
@@ -344,7 +344,7 @@ CATEGORY_COLUMNS = {
     ],
     "OHSAS": [
         'S.No', 'Certificate_No', 'Certificate_Issue_Date', 'Surveillance_1_date', 
-        'Surveillance_2_date', 'certification_audit_conducted', 'Verification_Date', 
+        'Surveillance_2_date', 'certification_audit_conducted', 'Closure_Date', 
         'Organization_Name', 'Address', 'Temp_Address', 'Temp_manday', 'Scope_s', 'Director_Name', 
         'MR_Name', 'IAF_CODE', 'MANDAY', 'stage_1_manday', 'stage_2_manday', 
         'Surveillance_Manday', 'Risk_Category', 'NO_OF_EMPLOYEE', 'audit_number', 'phone_number', 
@@ -394,12 +394,27 @@ def generate_docx(file_id, row_id):
         if not template_file or not os.path.exists(template_file):
             return jsonify({"error": f"No template for {category} - {manday_key}"}), 400
 
-        # Load Excel/CSV
-        df = (
-            pd.read_excel(user_file.file_path)
-            if user_file.file_path.endswith(".xlsx")
-            else pd.read_csv(user_file.file_path)
-        )
+        # # Load Excel/CSV
+        # df = (
+        #     pd.read_excel(user_file.file_path)
+        #     if user_file.file_path.endswith(".xlsx")
+        #     else pd.read_csv(user_file.file_path)
+        # )
+
+        ext = user_file.file_path.lower().split(".")[-1]
+
+        if ext in ["xlsm", "xlsx"]:
+            df = pd.read_excel(user_file.file_path, engine="openpyxl")
+        elif ext == "xls":
+            df = pd.read_excel(user_file.file_path, engine="xlrd")  # only if old .xls
+        elif ext == "csv":
+            try:
+                df = pd.read_csv(user_file.file_path, encoding="utf-8")
+            except UnicodeDecodeError:
+                df = pd.read_csv(user_file.file_path, encoding="latin1")
+        else:
+            return jsonify({"error": f"Unsupported file type: {ext}"}), 
+            
         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
 
         df.reset_index(inplace=True)
@@ -436,8 +451,19 @@ def generate_docx(file_id, row_id):
         # output_path = os.path.join(OUTPUT_DIR, file_name)
         # doc.save(output_path)
 
+        # org_name = row_data.get("Organization_Name", f"record_{file_id}_{row_id}")
+        # safe_org_name = "".join(c if c.isalnum() or c in (" ", "_", "-") else "_" for c in org_name).strip()
+        # file_name = f"{safe_org_name}_{category}.docx"
+
         org_name = row_data.get("Organization_Name", f"record_{file_id}_{row_id}")
+
+        # Replace invalid filename chars with underscore
         safe_org_name = "".join(c if c.isalnum() or c in (" ", "_", "-") else "_" for c in org_name).strip()
+
+        # Remove any trailing underscores/spaces to avoid messy filenames
+        safe_org_name = safe_org_name.rstrip("_").rstrip()
+
+        # Append category in uppercase
         file_name = f"{safe_org_name}_{category}.docx"
 
         output_path = os.path.join(OUTPUT_DIR, file_name)
@@ -505,11 +531,27 @@ def upload_file():
         file.save(file_path)
         
         # Read file temporarily to validate columns
-        df = (
-            pd.read_excel(file)
-            if file.filename.endswith(".xlsx")
-            else pd.read_csv(file)
-        )
+        # df = (
+        #     pd.read_excel(file)
+        #     # if file.filename.endswith(".xlsx")
+        #     if file.filename.endswith(".xlsm")
+        #     else pd.read_csv(file)
+        # )
+
+        # Detect file extension
+        ext = file.filename.lower().split(".")[-1]
+
+        # Read file into DataFrame
+        if ext in ["xlsm", "xlsx", "xls"]:
+            df = pd.read_excel(file_path, engine="openpyxl")
+        elif ext == "csv":
+            try:
+                df = pd.read_csv(file_path, encoding="utf-8")
+            except UnicodeDecodeError:
+                df = pd.read_csv(file_path, encoding="latin1")
+        else:
+            return {"error": f"Unsupported file type: {ext}"}, 400
+
         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
 
         # Validate against category config
@@ -563,11 +605,28 @@ def get_excel_rows(file_id):
             return {"error": "File not found or access denied"}, 404
 
         # Read file dynamically
-        df = (
-            pd.read_excel(user_file.file_path)
-            if user_file.file_path.endswith(".xlsx")
-            else pd.read_csv(user_file.file_path)
-        )
+        # df = (
+        #     pd.read_excel(user_file.file_path)
+        #     if user_file.file_path.endswith(".xlsx")
+        #     else pd.read_csv(user_file.file_path)
+        # )
+
+        # Detect extension
+        ext = user_file.file_path.lower().split(".")[-1]
+
+        # Read file dynamically
+        if ext in ["xlsm", "xlsx"]:
+            df = pd.read_excel(user_file.file_path, engine="openpyxl")
+        elif ext == "xls":
+            df = pd.read_excel(user_file.file_path, engine="xlrd")  # if supported
+        elif ext == "csv":
+            try:
+                df = pd.read_csv(user_file.file_path, encoding="utf-8")
+            except UnicodeDecodeError:
+                df = pd.read_csv(user_file.file_path, encoding="latin1")
+        else:
+            return {"error": f"Unsupported file type: {ext}"}, 400
+
         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
 
         df.reset_index(inplace=True)

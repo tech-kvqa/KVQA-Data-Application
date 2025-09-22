@@ -183,7 +183,7 @@
       <v-file-input
         v-model="selectedFile"
         label="Select Excel/CSV file"
-        accept=".xlsx,.xls,.csv"
+        accept=".xlsx,.xls,.csv,.xlsm"
         outlined
         dense
         class="mb-4"
