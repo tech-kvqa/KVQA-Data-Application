@@ -16,6 +16,7 @@ from functools import wraps
 import re
 from werkzeug.utils import secure_filename
 from urllib.parse import quote
+import random
 
 load_dotenv()
 
@@ -365,9 +366,21 @@ CATEGORY_COLUMNS = {
 }
 
 CATEGORY_CHECKLIST_TEMPLATES = {
-    "QMS": os.path.join(TEMPLATES_DIR, "QMS_checklist.docx"),
-    "EMS": os.path.join(TEMPLATES_DIR, "EMS_checklist.docx"),
-    "OHSMS": os.path.join(TEMPLATES_DIR, "OHSMS_checklist.docx"),
+    "QMS": [
+        os.path.join(TEMPLATES_DIR, "QMS_checklist_01.docx"),
+        os.path.join(TEMPLATES_DIR, "QMS_checklist_02.docx"),
+        os.path.join(TEMPLATES_DIR, "QMS_checklist_03.docx"),
+    ],
+    "EMS": [
+        os.path.join(TEMPLATES_DIR, "EMS_checklist_01.docx"),
+        os.path.join(TEMPLATES_DIR, "EMS_checklist_02.docx"),
+        os.path.join(TEMPLATES_DIR, "EMS_checklist_03.docx"),
+    ],
+    "OHSMS": [
+        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_01.docx"),
+        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_02.docx"),
+        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_03.docx"),
+    ],
 }
 
 def make_browser_safe_filename(org_name, category):
@@ -756,6 +769,13 @@ def get_excel_rows(file_id):
 
         df_master["Status"] = df_master["id"].apply(lambda x: "Generated" if x in generated_rows else "Pending")
 
+        generated_checklists = {
+            c.row_id
+            for c in ChecklistDoc.query.filter_by(user_id=current_user_id, category=user_file.category).all()
+        }
+        
+        df_master["ChecklistGenerated"] = df_master["id"].apply(lambda x: x in generated_checklists)
+
         df_master = df_master.replace({np.nan: None, np.inf: None, -np.inf: None})
 
         return jsonify(df_master.to_dict(orient="records"))
@@ -1137,9 +1157,17 @@ def generate_checklist(file_id, row_id):
         category = user_file.category.upper()  # QMS, EMS, OHSMS
 
         # --- Pick checklist template ---
-        template_file = CATEGORY_CHECKLIST_TEMPLATES.get(category)
-        if not template_file or not os.path.exists(template_file):
-            return jsonify({"error": f"Checklist template not found for {category}"}), 400
+        # template_file = CATEGORY_CHECKLIST_TEMPLATES.get(category)
+        # if not template_file or not os.path.exists(template_file):
+        #     return jsonify({"error": f"Checklist template not found for {category}"}), 400
+
+        template_candidates = CATEGORY_CHECKLIST_TEMPLATES.get(category, [])
+        if not template_candidates:
+            return jsonify({"error": f"No checklist templates found for {category}"}), 400
+
+        template_file = random.choice(template_candidates)  # ✅ random selection
+        if not os.path.exists(template_file):
+            return jsonify({"error": f"Template file not found: {template_file}"}), 400
 
         # --- Load Excel ---
         xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
