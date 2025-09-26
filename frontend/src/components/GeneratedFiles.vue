@@ -254,7 +254,7 @@ export default {
     async fetchGeneratedDocs() {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://127.0.0.1:5000/generated-docs", {
+        const res = await axios.get("https://kvqa-data-application.onrender.com/generated-docs", {
           headers: { Authorization: `Bearer ${token}` }
         });
         this.generatedDocs = res.data;
@@ -269,7 +269,7 @@ export default {
     async fetchGeneratedChecklists() {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://127.0.0.1:5000/generated-checklists", {
+        const res = await axios.get("https://kvqa-data-application.onrender.com/generated-checklists", {
           headers: { Authorization: `Bearer ${token}` }
         });
         this.generatedChecklists = res.data;
@@ -286,8 +286,8 @@ export default {
         const token = localStorage.getItem("token");
         const endpoint =
           mode === "docs"
-            ? `http://127.0.0.1:5000/download-generated-file/${fileName}`
-            : `http://127.0.0.1:5000/download-checklist-file/${fileName}`;
+            ? `https://kvqa-data-application.onrender.com/download-generated-file/${fileName}`
+            : `https://kvqa-data-application.onrender.com/download-checklist-file/${fileName}`;
 
         const res = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },

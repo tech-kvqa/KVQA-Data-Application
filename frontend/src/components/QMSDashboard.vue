@@ -692,7 +692,7 @@ export default {
         formData.append("category", "QMS");
 
         const res = await axios.post(
-          "http://127.0.0.1:5000/upload-file",
+          "https://kvqa-data-application.onrender.com/upload-file",
           // "https://kvqa-data-application.onrender.com/upload-file",
           formData,
           {
@@ -717,7 +717,7 @@ export default {
     async fetchUserFiles() {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://127.0.0.1:5000/my-files", {
+        const res = await axios.get("https://kvqa-data-application.onrender.com/my-files", {
         // const res = await axios.get("https://kvqa-data-application.onrender.com/my-files", {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -730,7 +730,7 @@ export default {
     async fetchCurrentUserGeneratedRows() {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://127.0.0.1:5000/generated-docs", {
+        const res = await axios.get("https://kvqa-data-application.onrender.com/generated-docs", {
         // const res = await axios.get("https://kvqa-data-application.onrender.com/generated-docs", {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -748,7 +748,7 @@ export default {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          `http://127.0.0.1:5000/excel-rows/${this.selectedFileId}`,
+          `https://kvqa-data-application.onrender.com/excel-rows/${this.selectedFileId}`,
           // `https://kvqa-data-application.onrender.com/excel-rows/${this.selectedFileId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -799,7 +799,7 @@ export default {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          `http://127.0.0.1:5000/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
+          `https://kvqa-data-application.onrender.com/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
           // `https://kvqa-data-application.onrender.com/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
           { headers: { Authorization: `Bearer ${token}` }, responseType: "blob" }
         );
@@ -836,7 +836,7 @@ export default {
     //   try {
     //     const token = localStorage.getItem("token");
     //     const res = await axios.get(
-    //       `http://127.0.0.1:5000/generate-checklist/${this.selectedFileId}/${rowId}`,
+    //       `https://kvqa-data-application.onrender.com/generate-checklist/${this.selectedFileId}/${rowId}`,
     //       {
     //         headers: { Authorization: `Bearer ${token}` },
     //         responseType: "blob"
@@ -873,7 +873,7 @@ export default {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          `http://127.0.0.1:5000/generate-checklist/${this.selectedFileId}/${rowId}`,
+          `https://kvqa-data-application.onrender.com/generate-checklist/${this.selectedFileId}/${rowId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
             responseType: "blob"
@@ -935,7 +935,7 @@ export default {
         const token = localStorage.getItem("token");
         const category = row.Category || "QMS"; // pass current category
         await axios.delete(
-          `http://127.0.0.1:5000/delete-generated/${category}/${row.id}`,
+          `https://kvqa-data-application.onrender.com/delete-generated/${category}/${row.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -960,7 +960,7 @@ export default {
         const token = localStorage.getItem("token");
         const category = row.Category || "QMS"; // pass current category
         await axios.delete(
-          `http://127.0.0.1:5000/delete-checklist/${category}/${row.id}`,
+          `https://kvqa-data-application.onrender.com/delete-checklist/${category}/${row.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
