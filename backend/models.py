@@ -67,3 +67,15 @@ class GeneratedDoc(db.Model):
 
     user = db.relationship("User", backref="generated_docs")
 
+class ChecklistDoc(db.Model):
+    __tablename__ = "checklist_docs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    row_id = db.Column(db.Integer, nullable=False)   # Excel row id used
+    file_name = db.Column(db.String(255), nullable=False)
+    file_data = db.Column(db.LargeBinary, nullable=False)  # Store .docx bytes
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    category = db.Column(db.String(50), nullable=False)  # QMS, EMS, OHSMS, etc.
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="checklist_docs")
