@@ -411,7 +411,7 @@ export default {
           <v-btn
             small
             color="secondary"
-            :disabled="item.ChecklistGenerated"
+            :disabled="!item.ChecklistAvailable || item.ChecklistGenerated"
             @click="generateChecklist(item.id)"
           >
             Checklist
