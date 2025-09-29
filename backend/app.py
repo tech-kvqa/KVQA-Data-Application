@@ -370,16 +370,25 @@ CATEGORY_CHECKLIST_TEMPLATES = {
         os.path.join(TEMPLATES_DIR, "QMS_checklist_01.docx"),
         os.path.join(TEMPLATES_DIR, "QMS_checklist_02.docx"),
         os.path.join(TEMPLATES_DIR, "QMS_checklist_03.docx"),
+        os.path.join(TEMPLATES_DIR, "QMS_checklist_04.docx"),
+        os.path.join(TEMPLATES_DIR, "QMS_checklist_05.docx"),
+        os.path.join(TEMPLATES_DIR, "QMS_checklist_06.docx"),
     ],
     "EMS": [
         os.path.join(TEMPLATES_DIR, "EMS_checklist_01.docx"),
         os.path.join(TEMPLATES_DIR, "EMS_checklist_02.docx"),
         os.path.join(TEMPLATES_DIR, "EMS_checklist_03.docx"),
+        os.path.join(TEMPLATES_DIR, "EMS_checklist_04.docx"),
+        os.path.join(TEMPLATES_DIR, "EMS_checklist_05.docx"),
+        os.path.join(TEMPLATES_DIR, "EMS_checklist_06.docx"),
     ],
     "OHSMS": [
         os.path.join(TEMPLATES_DIR, "OHSMS_checklist_01.docx"),
         os.path.join(TEMPLATES_DIR, "OHSMS_checklist_02.docx"),
         os.path.join(TEMPLATES_DIR, "OHSMS_checklist_03.docx"),
+        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_04.docx"),
+        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_05.docx"),
+        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_06.docx"),
     ],
 }
 
