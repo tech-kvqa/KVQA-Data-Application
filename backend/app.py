@@ -481,6 +481,15 @@ def generate_docx(file_id, row_id):
         #     elif pd.isna(v):
         #         row_data[k] = "NA"
 
+        for k, v in row_data.items():
+            if isinstance(v, str):
+                # escape &, <, > for Word XML, keep everything else as-is
+                row_data[k] = v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            elif pd.isna(v):
+                row_data[k] = "NA"
+            elif isinstance(v, pd.Timestamp):
+                row_data[k] = v.strftime("%d-%m-%Y")
+
         if "INTERNAL_ISSUE_NO" in row_data and isinstance(row_data["INTERNAL_ISSUE_NO"], str):
             row_data["INTERNAL_ISSUE_NO"] = escape(row_data["INTERNAL_ISSUE_NO"])
 
@@ -1148,6 +1157,112 @@ def get_all_generated_docs():
 #         db.session.rollback()
 #         return jsonify({"error": str(e)}), 500
 
+# @app.route("/generate-checklist/<int:file_id>/<int:row_id>", methods=["GET"])
+# @jwt_required()
+# def generate_checklist(file_id, row_id):
+#     try:
+#         current_user_id = int(get_jwt_identity())
+
+#         # --- Find the uploaded file ---
+#         user_file = UserFile.query.filter_by(
+#             id=file_id,
+#             user_id=current_user_id,
+#             source_type="uploaded"
+#         ).first()
+#         if not user_file:
+#             return jsonify({"error": "File not found or access denied"}), 404
+
+#         category = user_file.category.upper()  # QMS, EMS, OHSMS
+
+#         # --- Pick checklist template ---
+#         # template_file = CATEGORY_CHECKLIST_TEMPLATES.get(category)
+#         # if not template_file or not os.path.exists(template_file):
+#         #     return jsonify({"error": f"Checklist template not found for {category}"}), 400
+
+#         template_candidates = CATEGORY_CHECKLIST_TEMPLATES.get(category, [])
+#         if not template_candidates:
+#             return jsonify({"error": f"No checklist templates found for {category}"}), 400
+
+#         template_file = random.choice(template_candidates)  # ✅ random selection
+#         if not os.path.exists(template_file):
+#             return jsonify({"error": f"Template file not found: {template_file}"}), 400
+
+#         # --- Load Excel ---
+#         xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
+        
+#         # ✅ Load master sheet (e.g. QMS 2025)
+#         sheet_name_map = {
+#             "QMS": "QMS 2025",
+#             "EMS": "EMS 2025",
+#             "OHSMS": "OHSMS 2025"
+#         }
+#         df_master = xl.parse(sheet_name_map.get(category, "Sheet1"))
+#         df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
+
+#         # ✅ Load checklist sheet
+#         sheet_candidates = [s for s in xl.sheet_names if category in s and "Checklist" in s]
+#         if not sheet_candidates:
+#             return jsonify({"error": f"No checklist sheet found for {category}"}), 404
+#         df_checklist = xl.parse(sheet_candidates[0])
+#         df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
+
+#         # --- Get row from doc sheet by row_id ---
+#         master_row = df_master.reset_index()
+#         master_row.rename(columns={"index": "id"}, inplace=True)
+#         master_row["id"] = master_row["id"] + 1
+
+#         selected_row = master_row[master_row["id"] == row_id].to_dict(orient="records")
+#         if not selected_row:
+#             return jsonify({"error": "Row not found in doc sheet"}), 404
+
+#         master_data = selected_row[0]
+#         certificate_no = master_data.get("Certificate_No")
+
+#         # --- Match checklist row by Certificate_No ---
+#         checklist_row = df_checklist[df_checklist["Certificate_No"] == certificate_no].to_dict(orient="records")
+#         if not checklist_row:
+#             return jsonify({"error": f"No checklist entry found for Certificate_No {certificate_no}"}), 404
+
+#         row_data = checklist_row[0]
+
+#         # --- Merge master + checklist ---
+#         context = {**master_data, **row_data}
+#         for k, v in context.items():
+#             if isinstance(v, pd.Timestamp):
+#                 context[k] = v.strftime("%d-%m-%Y")
+#             elif pd.isna(v):
+#                 context[k] = "NA"
+
+#         # --- Render checklist doc ---
+#         doc = DocxTemplate(template_file)
+#         doc.render(context)
+
+#         org_name = context.get("Organization_Name", f"record_{file_id}_{row_id}")
+#         org_name_safe = re.sub(r"[^\w]", "_", org_name).strip("_")
+#         file_name_safe = f"{org_name_safe}_{category}_checklist.docx"
+
+#         output_path = os.path.join(OUTPUT_DIR, file_name_safe)
+#         doc.save(output_path)
+
+#         # --- Save in DB ---
+#         with open(output_path, "rb") as f:
+#             new_record = ChecklistDoc(
+#                 row_id=row_id,
+#                 file_name=file_name_safe,
+#                 file_data=f.read(),
+#                 user_id=current_user_id,
+#                 category=category
+#             )
+#             db.session.add(new_record)
+#             db.session.commit()
+
+#         return send_file(output_path, as_attachment=True, download_name=file_name_safe)
+
+#     except Exception as e:
+#         traceback.print_exc()
+#         db.session.rollback()
+#         return jsonify({"error": str(e)}), 500
+
 @app.route("/generate-checklist/<int:file_id>/<int:row_id>", methods=["GET"])
 @jwt_required()
 def generate_checklist(file_id, row_id):
@@ -1163,49 +1278,36 @@ def generate_checklist(file_id, row_id):
         if not user_file:
             return jsonify({"error": "File not found or access denied"}), 404
 
-        category = user_file.category.upper()  # QMS, EMS, OHSMS
+        category = user_file.category.upper()
 
         # --- Pick checklist template ---
-        # template_file = CATEGORY_CHECKLIST_TEMPLATES.get(category)
-        # if not template_file or not os.path.exists(template_file):
-        #     return jsonify({"error": f"Checklist template not found for {category}"}), 400
-
         template_candidates = CATEGORY_CHECKLIST_TEMPLATES.get(category, [])
         if not template_candidates:
             return jsonify({"error": f"No checklist templates found for {category}"}), 400
-
-        template_file = random.choice(template_candidates)  # ✅ random selection
+        template_file = random.choice(template_candidates)
         if not os.path.exists(template_file):
             return jsonify({"error": f"Template file not found: {template_file}"}), 400
 
         # --- Load Excel ---
         xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
-        
-        # ✅ Load master sheet (e.g. QMS 2025)
-        sheet_name_map = {
-            "QMS": "QMS 2025",
-            "EMS": "EMS 2025",
-            "OHSMS": "OHSMS 2025"
-        }
+        sheet_name_map = {"QMS": "QMS 2025", "EMS": "EMS 2025", "OHSMS": "OHSMS 2025"}
         df_master = xl.parse(sheet_name_map.get(category, "Sheet1"))
         df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
 
-        # ✅ Load checklist sheet
         sheet_candidates = [s for s in xl.sheet_names if category in s and "Checklist" in s]
         if not sheet_candidates:
             return jsonify({"error": f"No checklist sheet found for {category}"}), 404
         df_checklist = xl.parse(sheet_candidates[0])
         df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
 
-        # --- Get row from doc sheet by row_id ---
+        # --- Get row from master sheet ---
         master_row = df_master.reset_index()
         master_row.rename(columns={"index": "id"}, inplace=True)
         master_row["id"] = master_row["id"] + 1
 
         selected_row = master_row[master_row["id"] == row_id].to_dict(orient="records")
         if not selected_row:
-            return jsonify({"error": "Row not found in doc sheet"}), 404
-
+            return jsonify({"error": "Row not found in master sheet"}), 404
         master_data = selected_row[0]
         certificate_no = master_data.get("Certificate_No")
 
@@ -1213,7 +1315,6 @@ def generate_checklist(file_id, row_id):
         checklist_row = df_checklist[df_checklist["Certificate_No"] == certificate_no].to_dict(orient="records")
         if not checklist_row:
             return jsonify({"error": f"No checklist entry found for Certificate_No {certificate_no}"}), 404
-
         row_data = checklist_row[0]
 
         # --- Merge master + checklist ---
@@ -1223,6 +1324,9 @@ def generate_checklist(file_id, row_id):
                 context[k] = v.strftime("%d-%m-%Y")
             elif pd.isna(v):
                 context[k] = "NA"
+            elif isinstance(v, str):
+                # Only replace & with &amp; so Word can render it
+                context[k] = v.replace("&", "&amp;")
 
         # --- Render checklist doc ---
         doc = DocxTemplate(template_file)
