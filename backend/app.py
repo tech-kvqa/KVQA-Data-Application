@@ -356,7 +356,7 @@ CATEGORY_COLUMNS = {
         'mail_id', 'Lead_Auditor', 'Auditor', 'Verification_Auditor', 'Stage_1_Date', 
         'stage_1_schedule_date', 'Stage_2_Date', 'stage_2_schedule_date', 'Starting_Date', 
         'manual_date', 'manual_number', 'procedure_number', 'Questionnaire_date', 'Quotation_date', 
-        'contract_review_Date', 'quotation_number', 'Internal_Audit_NO', 'Safety_officer_name', 
+        'contract_review_Date', 'quotation_number', 'Internal_Audit_NO', 'DR_Name', 'Safety_officer_name', 
         'Internal_Auditor_name', 'Auditor_Qualification', 'Non_conformity', 'Internal_Audit_Date', 
         'MRM_Date', 'MRM_NO', 'MRM_Agenda', 'INTERNAL_ISSUE_NO', 'INTERNAL_ISSUE', 'EXTERNAL_ISSUE', 
         'interested_parties_NO', 'interested_parties', 'PROCESS', 'Key_process', 'objective_NO', 
