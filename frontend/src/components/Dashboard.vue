@@ -537,6 +537,21 @@ export default {
           </p>
         </v-card>
       </v-col>
+
+      <!-- IMS -->
+      <v-col cols="12" md="4">
+        <v-card
+          class="pa-6 d-flex flex-column align-center justify-center text-center rounded-xl cursor-pointer hover-card"
+          elevation="4"
+          @click="$router.push('/ims_dashboard')"
+        >
+          <v-icon size="48" color="success" class="mb-4">mdi-shield-account</v-icon>
+          <h3 class="text-h6 font-weight-medium mb-2">IMS Dashboard</h3>
+          <p class="text-body-2 text-medium-emphasis">
+            Access Occupational Health,Safety dashboard, Environment and Quality Management.
+          </p>
+        </v-card>
+      </v-col>
     </v-row>
 
     <!-- Info Alert -->

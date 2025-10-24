@@ -7,6 +7,7 @@ import Register from '../views/Register.vue';
 import GeneratedFiles from '../components/GeneratedFiles.vue';
 import QMSDashboard from '../components/QMSDashboard.vue';
 import EMSDashboard from '../components/EMSDashboard.vue';
+import IMSDashboard from '../components/IMSDashboard.vue';
 import AdminFiles from '../components/AdminFiles.vue';
 import OshasDashboard from '../components/OshasDashboard.vue';
 
@@ -19,6 +20,7 @@ const routes = [
   { path: '/qms_dashboard', name: 'QMSDashboard', component: QMSDashboard},
   { path: '/ems_dashboard', name: 'EMSDashboard', component: EMSDashboard},
   { path: '/oshas_dashboard', name: 'OshasDashboard', component: OshasDashboard },
+  { path: '/ims_dashboard', name: 'IMSDashboard', component: IMSDashboard },
   { path: '/generated_files', name: 'GeneratedFiles', component: GeneratedFiles },
   { path: '/admin_files', name: 'AdminFiles', component: AdminFiles }
 ]
