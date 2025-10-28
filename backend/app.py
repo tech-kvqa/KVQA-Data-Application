@@ -316,6 +316,7 @@ CATEGORY_TEMPLATES = {
     },
     "IMS": {
         "8_manday": os.path.join(TEMPLATES_DIR, "ims_8_manday.docx"),
+        "9_manday": os.path.join(TEMPLATES_DIR, "ims_9_manday.docx"),
         "10_manday": os.path.join(TEMPLATES_DIR, "ims_10_manday.docx"),
     }
 }

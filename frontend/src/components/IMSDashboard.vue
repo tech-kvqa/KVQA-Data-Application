@@ -324,6 +324,8 @@ export default {
         templateType = "10_manday";
       } else if (manday === "8" || manday === "8_manday") {
         templateType = "8_manday";
+      } else if (manday === "9" || manday === "9_manday") {
+        templateType = "9_manday";
       } else {
         this.message = `⚠️ Cannot generate document: unsupported MANDAY value "${row.MANDAY}"`;
         return;
