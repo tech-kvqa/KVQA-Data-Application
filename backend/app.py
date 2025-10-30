@@ -947,18 +947,44 @@ def admin_all_files():
         } for f in files
     ])
 
-@app.route("/admin/generated-docs", methods=["GET"])
-@admin_required
-def admin_generated_docs():
-    docs = GeneratedDoc.query.order_by(GeneratedDoc.created_at.desc()).all()
+# @app.route("/admin/generated-docs", methods=["GET"])
+# @admin_required
+# def admin_generated_docs():
+#     docs = GeneratedDoc.query.order_by(GeneratedDoc.created_at.desc()).all()
+#     return jsonify([
+#         {
+#             "id": d.id,
+#             "username": d.user.username,
+#             "row_id": d.row_id,
+#             "file_name": d.file_name,
+#             "category": d.category,
+#             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
+#         } for d in docs
+#     ])
+
+@app.route("/generated-docs", methods=["GET"])
+@jwt_required()
+def get_generated_docs():
+    current_user_id = int(get_jwt_identity())
+    category = request.args.get("category", None)
+
+    query = GeneratedDoc.query.filter_by(user_id=current_user_id)
+
+    if category:
+        query = query.filter(GeneratedDoc.category.ilike(category))
+
+    print("Requested category:", category)
+
+    docs = query.order_by(GeneratedDoc.created_at.desc()).all()
+
     return jsonify([
         {
             "id": d.id,
-            "username": d.user.username,
             "row_id": d.row_id,
             "file_name": d.file_name,
             "category": d.category,
-            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "GeneratedDoc"
         } for d in docs
     ])
 
@@ -1599,17 +1625,45 @@ def delete_checklist(category, row_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+# @app.route("/generated-checklists", methods=["GET"])
+# @jwt_required()
+# def get_generated_checklists():
+#     current_user_id = int(get_jwt_identity())
+#     docs = ChecklistDoc.query.filter_by(user_id=current_user_id).order_by(ChecklistDoc.created_at.desc()).all()
+#     return jsonify([
+#         {
+#             "id": d.id,
+#             "row_id": d.row_id,
+#             "file_name": d.file_name,
+#             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
+#         } for d in docs
+#     ])
+
+
 @app.route("/generated-checklists", methods=["GET"])
 @jwt_required()
 def get_generated_checklists():
     current_user_id = int(get_jwt_identity())
-    docs = ChecklistDoc.query.filter_by(user_id=current_user_id).order_by(ChecklistDoc.created_at.desc()).all()
+    category = request.args.get("category", None)
+
+    query = ChecklistDoc.query.filter_by(user_id=current_user_id)
+
+    if category:
+        # Case-insensitive and space-trimmed comparison
+        query = query.filter(db.func.lower(db.func.trim(ChecklistDoc.category)) == category.strip().lower())
+
+    print("Requested checklist category:", category)
+
+    docs = query.order_by(ChecklistDoc.created_at.desc()).all()
+
     return jsonify([
         {
             "id": d.id,
             "row_id": d.row_id,
             "file_name": d.file_name,
-            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            "category": d.category,
+            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "ChecklistDoc"
         } for d in docs
     ])
 
