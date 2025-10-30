@@ -869,20 +869,45 @@ def get_excel_rows(file_id):
 
 
     
+# @app.route("/generated-docs", methods=["GET"])
+# @jwt_required()
+# def get_generated_docs():
+#     current_user_id = int(get_jwt_identity())
+#     docs = GeneratedDoc.query.filter_by(user_id=current_user_id).order_by(GeneratedDoc.created_at.desc()).all()
+#     return jsonify([
+#         {
+#             "id": d.id,
+#             "row_id": d.row_id,
+#             "file_name": d.file_name,
+#             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
+#         } for d in docs
+#     ])
+
 @app.route("/generated-docs", methods=["GET"])
 @jwt_required()
 def get_generated_docs():
     current_user_id = int(get_jwt_identity())
-    docs = GeneratedDoc.query.filter_by(user_id=current_user_id).order_by(GeneratedDoc.created_at.desc()).all()
+    category = request.args.get("category", None)
+
+    query = GeneratedDoc.query.filter_by(user_id=current_user_id)
+
+    if category:
+        query = query.filter(GeneratedDoc.category.ilike(category))
+
+    print("Requested category:", category)
+
+    docs = query.order_by(GeneratedDoc.created_at.desc()).all()
+
     return jsonify([
         {
             "id": d.id,
             "row_id": d.row_id,
             "file_name": d.file_name,
-            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            "category": d.category,
+            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "GeneratedDoc"
         } for d in docs
     ])
-
 
 # @app.route("/download-generated-file/<file_name>", methods=["GET"])
 # @jwt_required()
@@ -947,44 +972,18 @@ def admin_all_files():
         } for f in files
     ])
 
-# @app.route("/admin/generated-docs", methods=["GET"])
-# @admin_required
-# def admin_generated_docs():
-#     docs = GeneratedDoc.query.order_by(GeneratedDoc.created_at.desc()).all()
-#     return jsonify([
-#         {
-#             "id": d.id,
-#             "username": d.user.username,
-#             "row_id": d.row_id,
-#             "file_name": d.file_name,
-#             "category": d.category,
-#             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
-#         } for d in docs
-#     ])
-
-@app.route("/generated-docs", methods=["GET"])
-@jwt_required()
-def get_generated_docs():
-    current_user_id = int(get_jwt_identity())
-    category = request.args.get("category", None)
-
-    query = GeneratedDoc.query.filter_by(user_id=current_user_id)
-
-    if category:
-        query = query.filter(GeneratedDoc.category.ilike(category))
-
-    print("Requested category:", category)
-
-    docs = query.order_by(GeneratedDoc.created_at.desc()).all()
-
+@app.route("/admin/generated-docs", methods=["GET"])
+@admin_required
+def admin_generated_docs():
+    docs = GeneratedDoc.query.order_by(GeneratedDoc.created_at.desc()).all()
     return jsonify([
         {
             "id": d.id,
+            "username": d.user.username,
             "row_id": d.row_id,
             "file_name": d.file_name,
             "category": d.category,
-            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "source": "GeneratedDoc"
+            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
         } for d in docs
     ])
 
