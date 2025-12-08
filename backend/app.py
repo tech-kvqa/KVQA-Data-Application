@@ -23,12 +23,8 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, supports_credentials=True,)
 
-# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
-# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-# app.config["SQLALCHEMY_SECRET_KEY"] = "anuragiitmadras"
-
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    'DATABASE_URL')  # Use full URL from Render
+    'DATABASE_URL')
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
@@ -104,11 +100,8 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    # return {"message": "User registered successfully"}, 201
     return {"message": f"User '{username}' created with role '{role}'"}, 201
 
-
-# ---------- Login ----------
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
@@ -119,18 +112,8 @@ def login():
     if not user or not user.check_password(password):
         return {"error": "Invalid username or password"}, 401
 
-    # create JWT token with string identity
     access_token = create_access_token(identity=str(user.id))
     return jsonify(access_token=access_token, role=user.role)
-
-
-# ---------- Protected Example ----------
-# @app.route("/protected", methods=["GET"])
-# @jwt_required()
-# def protected():
-#     current_user_id = get_jwt_identity()
-#     user = User.query.get(current_user_id)
-#     return {"message": f"Hello {user.username}, you are logged in!"}
 
 @app.route("/protected", methods=["GET"])
 @jwt_required()
@@ -139,186 +122,50 @@ def protected():
     user = User.query.get(current_user_id)
     return {"message": f"Hello {user.username}, you are logged in!"}
 
-
-
-# ---------- Get All Users (Optional Admin Route) ----------
 @app.route("/users", methods=["GET"])
 def get_users():
     users = User.query.all()
     return jsonify([{"id": u.id, "username": u.username, "role": u.role} for u in users])
 
-# ---------- Get Excel Rows ----------
-# @app.route("/excel-rows", methods=["GET"])
-# @jwt_required()
-# def get_excel_rows():
-#     try:
-#         # df = pd.read_excel(EXCEL_FILE)
-#         print("Current user:", get_jwt_identity())
-#         df = pd.read_excel(EXCEL_FILE)
-#         # df = pd.read_csv(SHEET_CSV_URL)
-#         print("Columns read from Google Sheet:", df.columns.tolist())
-#         print("First 5 rows:", df.head())
-
-#         # Normalize column names (remove spaces, replace with _)
-#         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
-
-#         # Add ID column for frontend selection
-#         df.reset_index(inplace=True)
-#         df.rename(columns={"index": "id"}, inplace=True)
-#         df["id"] = df["id"] + 1
-
-#         # Add status column: "Generated" or "Pending"
-#         generated_rows = {g.row_id for g in GeneratedDoc.query.all()}
-#         df["Status"] = df["id"].apply(lambda x: "Generated" if x in generated_rows else "Pending")
-
-#         df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
-
-#         return jsonify(df.to_dict(orient="records"))
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
-# @app.route("/excel-rows", methods=["GET"])
-# @jwt_required()
-# def get_excel_rows():
-#     try:
-#         print("Current user:", get_jwt_identity())
-
-#         df = pd.read_csv(
-#             SHEET_CSV_URL,
-#             quotechar='"',
-#             encoding='utf-8',
-#             engine='python'
-#         )
-
-#         df = df.dropna(how='all')
-#         if df.empty:
-#             return jsonify({"error": "No data found in Google Sheet"}), 400
-
-#         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
-
-#         df.reset_index(inplace=True)
-#         df.rename(columns={"index": "id"}, inplace=True)
-#         df["id"] = df["id"] + 1
-
-#         generated_rows = {g.row_id for g in GeneratedDoc.query.all()}
-#         df["Status"] = df["id"].apply(lambda x: "Generated" if x in generated_rows else "Pending")
-
-#         df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
-
-#         return jsonify(df.to_dict(orient="records"))
-
-#     except Exception as e:
-#         print("❌ Error fetching Excel rows:", e)
-#         return jsonify({"error": str(e)}), 500
-
-
-
-# @app.route("/generate-docx/<int:row_id>", methods=["GET"])
-# @jwt_required()
-# def generate_docx(row_id):
-#     try:
-#         current_user_id = int(get_jwt_identity())
-#         template_type = request.args.get("template_type", "template1")  # default
-#         # template_type = request.args.get("template_type", "template1")
-#         # comment_type = request.args.get("comment_type", "prefilled")  # default
-
-#         if template_type == "template1":
-#             template_file = "D:/Anurag/Office/KVQA KAF Data Upload Application/backend/templates/template1.docx"
-#         else:
-#             template_file = "D:/Anurag/Office/KVQA KAF Data Upload Application/backend/templates/template2.docx"
-
-#         # if template_type == "template1" and comment_type == "custom":
-#         #     template_file = "backend/templates/template1_custom.docx"
-#         # elif template_type == "template1" and comment_type == "prefilled":
-#         #     template_file = "backend/templates/template1_prefilled.docx"
-#         # elif template_type == "template2" and comment_type == "custom":
-#         #     template_file = "backend/templates/template2_custom.docx"
-#         # else:
-#         #     template_file = "backend/templates/template2_prefilled.docx"
-
-#         user_file = UserFile.query.filter_by(id=file_id, user_id=current_user_id, source_type="uploaded").first()
-#         if not user_file:
-#             return jsonify({"error": "File not found or access denied"}), 404
-
-#         # df = pd.read_excel(EXCEL_FILE)
-#         df = (
-#             pd.read_excel(user_file.file_path)
-#             if user_file.file_path.endswith(".xlsx")
-#             else pd.read_csv(user_file.file_path)
-#         )
-#         # df = pd.read_csv(SHEET_CSV_URL)
-#         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
-
-#         df.reset_index(inplace=True)
-#         df.rename(columns={"index": "id"}, inplace=True)
-#         df["id"] = df["id"] + 1
-
-#         row = df[df["id"] == row_id].to_dict(orient="records")
-#         if not row:
-#             return jsonify({"error": "Row not found"}), 404
-
-#         row_data = row[0]
-
-#         for k, v in row_data.items():
-#             if isinstance(v, pd.Timestamp):
-#                 row_data[k] = v.strftime("%d-%m-%Y")
-#             elif pd.isna(v):  # Replace NaN or None with "NA" for Word template
-#                 row_data[k] = "NA"
-
-#         print("Row data being rendered:", row_data)
-#         print("Template path:", template_file)
-
-#         doc = DocxTemplate(template_file)
-#         doc.render(row_data)
-
-#         file_name = f"record_{row_id}_{template_type}.docx"
-#         output_path = os.path.join(OUTPUT_DIR, file_name)
-#         doc.save(output_path)
-
-#         # Save in DB
-#         # new_record = GeneratedDoc(row_id=row_id, file_name=file_name)
-#         # db.session.add(new_record)
-#         # db.session.commit()
-
-#         new_record = GeneratedDoc(row_id=row_id, file_name=file_name, user_id=current_user_id)
-#         db.session.add(new_record)
-
-#         # Also record in UserFile for tracking
-#         user_file_record = UserFile(
-#             user_id=current_user_id,
-#             file_name=file_name,
-#             file_path=output_path,
-#             source_type="generated"
-#         )
-#         db.session.add(user_file_record)
-
-#         db.session.commit()
-
-#         return send_file(output_path, as_attachment=True)
-
-#     except Exception as e:
-#         print("❌ Error in generate_docx:", str(e))
-#         traceback.print_exc()
-#         return jsonify({"error": str(e)}), 500
-
 CATEGORY_TEMPLATES = {
-    "QMS": {
-        "3_manday": os.path.join(TEMPLATES_DIR, "template1.docx"),
-        "6_manday": os.path.join(TEMPLATES_DIR, "template2.docx"),
-    },
-    "EMS": {
-        "4_manday": os.path.join(TEMPLATES_DIR, "ems_4_manday.docx"),
-        "6_manday": os.path.join(TEMPLATES_DIR, "ems_6_manday.docx"),
-    },
-    "OHSMS": {
-        "4_manday": os.path.join(TEMPLATES_DIR, "ohsas_4_manday.docx"),
-        "6_manday": os.path.join(TEMPLATES_DIR, "ohsas_6_manday.docx"),
-    },
-    "IMS": {
-        "8_manday": os.path.join(TEMPLATES_DIR, "ims_8_manday.docx"),
-        "9_manday": os.path.join(TEMPLATES_DIR, "ims_9_manday.docx"),
-        "10_manday": os.path.join(TEMPLATES_DIR, "ims_10_manday.docx"),
-    }
+    "APL": {
+        "QMS": {
+            "3_manday": os.path.join(TEMPLATES_DIR, "APL/template1.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "APL/template2.docx"),
+        },
+        "EMS": {
+            "4_manday": os.path.join(TEMPLATES_DIR, "APL/ems_4_manday.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "APL/ems_6_manday.docx"),
+        },
+        "OHSMS": {
+            "4_manday": os.path.join(TEMPLATES_DIR, "APL/ohsas_4_manday.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "APL/ohsas_6_manday.docx"),
+        },
+        "IMS": {
+            "8_manday": os.path.join(TEMPLATES_DIR, "APL/ims_8_manday.docx"),
+            "9_manday": os.path.join(TEMPLATES_DIR, "APL/ims_9_manday.docx"),
+            "10_manday": os.path.join(TEMPLATES_DIR, "APL/ims_10_manday.docx"),
+        }
+    }, 
+    "CSPL": {
+        "QMS": {
+            "3_manday": os.path.join(TEMPLATES_DIR, "CSPL/template1.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "CSPL/template2.docx"),
+        },
+        "EMS": {
+            "4_manday": os.path.join(TEMPLATES_DIR, "CSPL/ems_4_manday.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "CSPL/ems_6_manday.docx"),
+        },
+        "OHSMS": {
+            "4_manday": os.path.join(TEMPLATES_DIR, "CSPL/ohsas_4_manday.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "CSPL/ohsas_6_manday.docx"),
+        },
+        "IMS": {
+            "8_manday": os.path.join(TEMPLATES_DIR, "CSPL/ims_8_manday.docx"),
+            "9_manday": os.path.join(TEMPLATES_DIR, "CSPL/ims_9_manday.docx"),
+            "10_manday": os.path.join(TEMPLATES_DIR, "CSPL/ims_10_manday.docx"),
+        }
+    }, 
 }
 
 CATEGORY_COLUMNS = {
@@ -388,42 +235,75 @@ CATEGORY_COLUMNS = {
 }
 
 CATEGORY_CHECKLIST_TEMPLATES = {
-    "QMS": [
-        os.path.join(TEMPLATES_DIR, "QMS_checklist.docx"),
-        os.path.join(TEMPLATES_DIR, "QMS_checklist_02.docx"),
-        os.path.join(TEMPLATES_DIR, "QMS_checklist_03.docx"),
-        os.path.join(TEMPLATES_DIR, "QMS_checklist_04.docx"),
-        os.path.join(TEMPLATES_DIR, "QMS_checklist_05.docx"),
-        os.path.join(TEMPLATES_DIR, "QMS_checklist_06.docx"),
-    ],
-    "EMS": [
-        os.path.join(TEMPLATES_DIR, "EMS_checklist.docx"),
-        os.path.join(TEMPLATES_DIR, "EMS_checklist_02.docx"),
-        os.path.join(TEMPLATES_DIR, "EMS_checklist_03.docx"),
-        os.path.join(TEMPLATES_DIR, "EMS_checklist_04.docx"),
-        os.path.join(TEMPLATES_DIR, "EMS_checklist_05.docx"),
-        os.path.join(TEMPLATES_DIR, "EMS_checklist_06.docx"),
-    ],
-    "OHSMS": [
-        os.path.join(TEMPLATES_DIR, "OHSMS_checklist.docx"),
-        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_02.docx"),
-        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_03.docx"),
-        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_04.docx"),
-        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_05.docx"),
-        os.path.join(TEMPLATES_DIR, "OHSMS_checklist_06.docx"),
-    ],
-    "IMS": [
-        os.path.join(TEMPLATES_DIR, "IMS_checklist.docx"),
-        os.path.join(TEMPLATES_DIR, "IMS_checklist_02.docx"),
-        os.path.join(TEMPLATES_DIR, "IMS_checklist_03.docx")
-    ],
+    "APL": {
+        "QMS": [
+            os.path.join(TEMPLATES_DIR, "APL/QMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/QMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/QMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/QMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/QMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/QMS_checklist_06.docx"),
+        ],
+        "EMS": [
+            os.path.join(TEMPLATES_DIR, "APL/EMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/EMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/EMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/EMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/EMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/EMS_checklist_06.docx"),
+        ],
+        "OHSMS": [
+            os.path.join(TEMPLATES_DIR, "APL/OHSMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/OHSMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/OHSMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/OHSMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/OHSMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/OHSMS_checklist_06.docx"),
+        ],
+        "IMS": [
+            os.path.join(TEMPLATES_DIR, "APL/IMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/IMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "APL/IMS_checklist_03.docx")
+        ],
+    },
+    "CSPL": {
+        "QMS": [
+            os.path.join(TEMPLATES_DIR, "CSPL/QMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/QMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/QMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/QMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/QMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/QMS_checklist_06.docx"),
+        ],
+        "EMS": [
+            os.path.join(TEMPLATES_DIR, "CSPL/EMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/EMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/EMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/EMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/EMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/EMS_checklist_06.docx"),
+        ],
+        "OHSMS": [
+            os.path.join(TEMPLATES_DIR, "CSPL/OHSMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/OHSMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/OHSMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/OHSMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/OHSMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/OHSMS_checklist_06.docx"),
+        ],
+        "IMS": [
+            os.path.join(TEMPLATES_DIR, "CSPL/IMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/IMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "CSPL/IMS_checklist_03.docx")
+        ],
+    },
 }
 
 def make_browser_safe_filename(org_name, category):
     org_name = org_name.strip()
-    org_name_safe = re.sub(r'[^\w]', '_', org_name)  # only letters, numbers, underscore
-    org_name_safe = re.sub(r'_+', '_', org_name_safe)  # collapse repeated underscores
-    org_name_safe = org_name_safe.strip('_')  # remove leading/trailing underscores
+    org_name_safe = re.sub(r'[^\w]', '_', org_name)
+    org_name_safe = re.sub(r'_+', '_', org_name_safe)
+    org_name_safe = org_name_safe.strip('_')
     category_upper = category.lower()
     full_name = f"{org_name_safe}-{category_upper}.docx"
     print("Safe Full Filename:", full_name)
@@ -436,7 +316,6 @@ def generate_docx(file_id, row_id):
     try:
         current_user_id = int(get_jwt_identity())
 
-        # Find the uploaded file for this user
         user_file = UserFile.query.filter_by(
             id=file_id,
             user_id=current_user_id,
@@ -445,202 +324,125 @@ def generate_docx(file_id, row_id):
 
         if not user_file:
             return jsonify({"error": "File not found or access denied"}), 404
-        
+
         category = user_file.category
+        company = request.args.get("company", user_file.company).upper()
         manday_key = request.args.get("template_type")
 
-        # Validate mapping
-        if category not in CATEGORY_TEMPLATES:
-            return jsonify({"error": f"No templates configured for {category}"}), 400
-        template_file = CATEGORY_TEMPLATES[category].get(manday_key)
-        if not template_file or not os.path.exists(template_file):
-            return jsonify({"error": f"No template for {category} - {manday_key}"}), 400
+        if company not in CATEGORY_TEMPLATES:
+            return jsonify({"error": f"Invalid company: {company}"}), 400
 
-        # # Load Excel/CSV
+        if category not in CATEGORY_TEMPLATES[company]:
+            return jsonify({"error": f"No templates for {company} - {category}"}), 400
+
+        template_file = CATEGORY_TEMPLATES[company][category].get(manday_key)
+        if not template_file or not os.path.exists(template_file):
+            return jsonify({"error": f"No template for {company} - {category} - {manday_key}"}), 400
 
         ext = user_file.file_path.lower().split(".")[-1]
-
         if ext in ["xlsm", "xlsx"]:
             df = pd.read_excel(user_file.file_path, engine="openpyxl")
         elif ext == "xls":
-            df = pd.read_excel(user_file.file_path, engine="xlrd")  # only if old .xls
+            df = pd.read_excel(user_file.file_path, engine="xlrd")
         elif ext == "csv":
             try:
                 df = pd.read_csv(user_file.file_path, encoding="utf-8")
-            except UnicodeDecodeError:
+            except:
                 df = pd.read_csv(user_file.file_path, encoding="latin1")
         else:
-            return jsonify({"error": f"Unsupported file type: {ext}"}), 
-            
-        df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
+            return jsonify({"error": f"Unsupported file type: {ext}"}), 400
 
+        df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
         df.reset_index(inplace=True)
         df.rename(columns={"index": "id"}, inplace=True)
         df["id"] = df["id"] + 1
 
-        if "certification_audit_conducted" in df.columns:
-            if pd.api.types.is_datetime64_any_dtype(df["certification_audit_conducted"]):
-                df["certification_audit_conducted"] = df["certification_audit_conducted"].dt.strftime("%b-%y")
-
-        # --- Force date columns to dd-mm-yyyy ---
-        date_cols = [
-            "Certificate_Issue_Date", "Surveillance_1_date", "Surveillance_2_date", "Closure_Date",
-            "Starting_Date", "manual_date", "Internal_Audit_Date", "MRM_Date",
-            "Stage_1_Date", "stage_1_schedule_date", "stage_2_schedule_date",
-            "Questionnaire_date", "Quotation_date", "contract_review_Date"
-        ]
-        # for col in date_cols:
-        #     if col in df.columns:
-        #         df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%m-%Y")
-        #         df[col] = df[col].fillna("NA")
-
-        for col in date_cols:
-            if col in df.columns:
-                # --- For IMS, skip parsing Stage_1_Date ---
-                if category.upper() == "IMS" and col == "Stage_1_Date":
-                    # Keep it as raw string (text)
-                    df[col] = df[col].astype(str).fillna("NA")
-                else:
-                    # Normal case: convert to dd-mm-yyyy format
-                    df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%m-%Y")
-                    df[col] = df[col].fillna("NA")
-
-
-        # Get row by ID
         row = df[df["id"] == row_id].to_dict(orient="records")
         if not row:
             return jsonify({"error": "Row not found"}), 404
 
         row_data = row[0]
 
-        # Convert dates and handle NaN
-        # for k, v in row_data.items():
-        #     if isinstance(v, pd.Timestamp):
-        #         row_data[k] = v.strftime("%d-%m-%Y")
-        #     elif pd.isna(v):
-        #         row_data[k] = "NA"
-
         for k, v in row_data.items():
             if isinstance(v, str):
-                # escape &, <, > for Word XML, keep everything else as-is
                 row_data[k] = v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            elif pd.isna(v):
-                row_data[k] = "NA"
-            elif isinstance(v, pd.Timestamp):
-                row_data[k] = v.strftime("%d-%m-%Y")
 
-        if "INTERNAL_ISSUE_NO" in row_data and isinstance(row_data["INTERNAL_ISSUE_NO"], str):
-            row_data["INTERNAL_ISSUE_NO"] = escape(row_data["INTERNAL_ISSUE_NO"])
-
-
-        # Render Word doc
         doc = DocxTemplate(template_file)
         doc.render(row_data)
 
-        # file_name = f"record_{file_id}_{row_id}_{template_type}.docx"
-        # output_path = os.path.join(OUTPUT_DIR, file_name)
-        # doc.save(output_path)
-
-        # org_name = row_data.get("Organization_Name", f"record_{file_id}_{row_id}")
-        # safe_org_name = "".join(c if c.isalnum() or c in (" ", "_", "-") else "_" for c in org_name).strip()
-        # file_name = f"{safe_org_name}_{category}.docx"
-
         org_name = row_data.get("Organization_Name", f"record_{file_id}_{row_id}")
-        org_name = org_name.strip()
-        org_name_safe = re.sub(r'[^\w]', '_', org_name)  # only letters, numbers, underscore
-        org_name_safe = re.sub(r'_+', '_', org_name_safe)  # collapse repeated underscores
-        org_name_safe = org_name_safe.strip('_')  # remove leading/trailing underscores
-        category_upper = category.lower()
-        file_name_safe = f"{org_name_safe}-{category_upper}.docx"
-        print("File Name Safe: ", file_name_safe)
-        file_name = quote(file_name_safe)
-        print("File Name: ", file_name)
-
+        org_name_safe = re.sub(r'[^\w]', '_', org_name).strip("_")
+        file_name_safe = f"{org_name_safe}-{category.lower()}.docx"
         output_path = os.path.join(OUTPUT_DIR, file_name_safe)
+
         doc.save(output_path)
 
-        # Save in DB
-        # new_record = GeneratedDoc(
-        #     row_id=row_id,
-        #     file_name=file_name,
-        #     user_id=current_user_id
-        # )
-        # db.session.add(new_record)
-
         with open(output_path, "rb") as f:
-            new_record = GeneratedDoc(
+            new_doc = GeneratedDoc(
                 row_id=row_id,
-                file_name=file_name,
-                file_data=f.read(),   # save as bytes
+                file_name=file_name_safe,
+                file_data=f.read(),
                 user_id=current_user_id,
-                category = category
+                category=category,
+                company=company
             )
-        db.session.add(new_record)
+        db.session.add(new_doc)
 
-        # Also record in UserFile for tracking
-        user_file_record = UserFile(
+        generated_file = UserFile(
             user_id=current_user_id,
-            file_name=file_name,
+            file_name=file_name_safe,
             file_path=output_path,
             source_type="generated",
-            category = category
+            category=category,
+            company=company
         )
-        db.session.add(user_file_record)
+        db.session.add(generated_file)
 
         db.session.commit()
 
-        file_name_for_browser = quote(file_name_safe)
-
-        # return send_file(output_path, as_attachment=True)
         return send_file(
             output_path,
             as_attachment=True,
-            # download_name=file_name,
-            download_name=file_name_for_browser,
+            download_name=file_name_safe,
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
     except Exception as e:
-        print("❌ Error in generate_docx:", str(e))
-        traceback.print_exc()
         db.session.rollback()
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
     
 @app.route("/upload-file", methods=["POST"])
 @jwt_required()
 def upload_file():
     try:
         current_user_id = int(get_jwt_identity())
+
         if "file" not in request.files:
             return {"error": "No file uploaded"}, 400
-        
+
         file = request.files["file"]
         if file.filename == "":
             return {"error": "No file selected"}, 400
-        
+
         category = request.form.get("category")
+        company = request.form.get("company", "").upper()
+        print("Company:", company)
+        print("Category:", category)
+
         if not category:
             return {"error": "Category is required"}, 400
-        
-        # Save the file
+
+        if company not in CATEGORY_TEMPLATES:
+            return {"error": f"Invalid company: {company}"}, 400
+
         user_dir = os.path.join("uploads", str(current_user_id))
         os.makedirs(user_dir, exist_ok=True)
         file_path = os.path.join(user_dir, file.filename)
         file.save(file_path)
-        
-        # Read file temporarily to validate columns
-        # df = (
-        #     pd.read_excel(file)
-        #     # if file.filename.endswith(".xlsx")
-        #     if file.filename.endswith(".xlsm")
-        #     else pd.read_csv(file)
-        # )
 
-        # Detect file extension
         ext = file.filename.lower().split(".")[-1]
 
-        # Read file into DataFrame
         if ext in ["xlsm", "xlsx", "xls"]:
             df = pd.read_excel(file_path, engine="openpyxl")
         elif ext == "csv":
@@ -649,25 +451,24 @@ def upload_file():
             except UnicodeDecodeError:
                 df = pd.read_csv(file_path, encoding="latin1")
         else:
-            return {"error": f"Unsupported file type: {ext}"}, 400
+            return {"error": f"Unsupported file format: {ext}"}, 400
 
         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
 
-        # Validate against category config
         required_cols = CATEGORY_COLUMNS.get(category, [])
         missing = [col for col in required_cols if col not in df.columns]
         if missing:
             return {
-                "error": f"Uploaded file does not match expected format for {category}. Missing columns: {missing}"
+                "error": f"Uploaded file does not match expected format for {category}. Missing: {missing}"
             }, 400
 
-        # Record in DB
         user_file = UserFile(
             user_id=current_user_id,
             file_name=file.filename,
             file_path=file_path,
             source_type="uploaded",
-            category=category
+            category=category,
+            company=company
         )
         db.session.add(user_file)
         db.session.commit()
@@ -693,78 +494,6 @@ def my_files():
         } for f in files
     ])
 
-
-# @app.route("/excel-rows/<int:file_id>", methods=["GET"])
-# @jwt_required()
-# def get_excel_rows(file_id):
-#     try:
-#         current_user_id = int(get_jwt_identity())
-#         user_file = UserFile.query.filter_by(id=file_id, user_id=current_user_id).first()
-#         if not user_file:
-#             return {"error": "File not found or access denied"}, 404
-
-#         # Read file dynamically
-#         # df = (
-#         #     pd.read_excel(user_file.file_path)
-#         #     if user_file.file_path.endswith(".xlsx")
-#         #     else pd.read_csv(user_file.file_path)
-#         # )
-
-#         # Detect extension
-#         ext = user_file.file_path.lower().split(".")[-1]
-
-#         # Read file dynamically
-#         if ext in ["xlsm", "xlsx"]:
-#             df = pd.read_excel(user_file.file_path, engine="openpyxl")
-#         elif ext == "xls":
-#             df = pd.read_excel(user_file.file_path, engine="xlrd")  # if supported
-#         elif ext == "csv":
-#             try:
-#                 df = pd.read_csv(user_file.file_path, encoding="utf-8")
-#             except UnicodeDecodeError:
-#                 df = pd.read_csv(user_file.file_path, encoding="latin1")
-#         else:
-#             return {"error": f"Unsupported file type: {ext}"}, 400
-
-#         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
-
-#         df.reset_index(inplace=True)
-#         df.rename(columns={"index": "id"}, inplace=True)
-#         df["id"] = df["id"] + 1
-
-#         if "certification_audit_conducted" in df.columns:
-#             if pd.api.types.is_datetime64_any_dtype(df["certification_audit_conducted"]):
-#                 df["certification_audit_conducted"] = df["certification_audit_conducted"].dt.strftime("%b-%y")
-
-#         # Mark rows already generated
-#         # generated_rows = {g.row_id for g in GeneratedDoc.query.all()}
-#         # generated_rows = {g.row_id for g in GeneratedDoc.query.filter_by(user_id=current_user_id).all()}
-#         generated_rows = {
-#             g.row_id
-#             for g in GeneratedDoc.query.filter_by(
-#                 user_id=current_user_id,
-#                 category=user_file.category   # ensure same category
-#             ).all()
-#         }
-
-#         checklist_rows = {
-#             c.row_id
-#             for c in ChecklistDoc.query.filter_by(
-#                 user_id=current_user_id,
-#                 category=user_file.category
-#             ).all()
-#         }
-
-#         df["Status"] = df["id"].apply(lambda x: "Generated" if x in generated_rows else "Pending")
-#         df["ChecklistGenerated"] = df["id"].apply(lambda x: x in checklist_rows)
-
-#         df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
-
-#         return jsonify(df.to_dict(orient="records"))
-
-#     except Exception as e:
-#         return {"error": str(e)}, 500
-
 @app.route("/excel-rows/<int:file_id>", methods=["GET"])
 @jwt_required()
 def get_excel_rows(file_id):
@@ -785,7 +514,6 @@ def get_excel_rows(file_id):
         else:
             return {"error": f"Unsupported file type: {ext}"}, 400
 
-        # --- Load master sheet ---
         category = user_file.category.upper()
         sheet_name_map = {
             "QMS": "QMS 2025",
@@ -796,23 +524,12 @@ def get_excel_rows(file_id):
         df_master = xl.parse(sheet_name_map.get(category, xl.sheet_names[0]))
         df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
 
-        # --- Load checklist sheet ---
         checklist_sheets = [s for s in xl.sheet_names if category in s and "Checklist" in s]
-        # if checklist_sheets:
-        #     df_checklist = xl.parse(checklist_sheets[0])
-        #     df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
-        #     # Normalize Certificate_No
-        #     if "Certificate_No" in df_checklist.columns:
-        #         df_checklist["Certificate_No"] = df_checklist["Certificate_No"].astype(str).str.strip().str.upper()
-        #     checklist_certs = set(df_checklist["Certificate_No"].tolist())
-        # else:
-        #     checklist_certs = set()
 
         if checklist_sheets:
             df_checklist = xl.parse(checklist_sheets[0])
             df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
 
-            # For IMS, map Certificate_No_QMS
             if category == "IMS" and "Certificate_No_QMS" in df_checklist.columns:
                 df_checklist["Certificate_No"] = df_checklist["Certificate_No_QMS"].astype(str).str.strip().str.upper()
             elif "Certificate_No" in df_checklist.columns:
@@ -822,13 +539,9 @@ def get_excel_rows(file_id):
         else:
             checklist_certs = set()
 
-        # --- Prepare master rows ---
         df_master.reset_index(inplace=True)
         df_master.rename(columns={"index": "id"}, inplace=True)
         df_master["id"] = df_master["id"] + 1
-
-        # if "Certificate_No" in df_master.columns:
-        #     df_master["Certificate_No"] = df_master["Certificate_No"].astype(str).str.strip().str.upper()
 
         if category == "IMS":
             cert_col = "Certificate_No_QMS" if "Certificate_No_QMS" in df_master.columns else None
@@ -842,20 +555,26 @@ def get_excel_rows(file_id):
         else:
             df_master["Certificate_No"] = None
 
-        # Mark rows for which checklist exists
         df_master["ChecklistAvailable"] = df_master["Certificate_No"].apply(lambda x: x in checklist_certs)
 
-        # Mark rows already generated
         generated_rows = {
             g.row_id
-            for g in GeneratedDoc.query.filter_by(user_id=current_user_id, category=user_file.category).all()
+            for g in GeneratedDoc.query.filter_by(
+                user_id=current_user_id,
+                category=user_file.category,
+                company=user_file.company   # NEW ✔
+            ).all()
         }
 
         df_master["Status"] = df_master["id"].apply(lambda x: "Generated" if x in generated_rows else "Pending")
 
         generated_checklists = {
             c.row_id
-            for c in ChecklistDoc.query.filter_by(user_id=current_user_id, category=user_file.category).all()
+            for c in ChecklistDoc.query.filter_by(
+                user_id=current_user_id,
+                category=user_file.category,
+                company=user_file.company
+            ).all()
         }
         
         df_master["ChecklistGenerated"] = df_master["id"].apply(lambda x: x in generated_checklists)
@@ -867,34 +586,24 @@ def get_excel_rows(file_id):
     except Exception as e:
         return {"error": str(e)}, 500
 
-
-    
-# @app.route("/generated-docs", methods=["GET"])
-# @jwt_required()
-# def get_generated_docs():
-#     current_user_id = int(get_jwt_identity())
-#     docs = GeneratedDoc.query.filter_by(user_id=current_user_id).order_by(GeneratedDoc.created_at.desc()).all()
-#     return jsonify([
-#         {
-#             "id": d.id,
-#             "row_id": d.row_id,
-#             "file_name": d.file_name,
-#             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
-#         } for d in docs
-#     ])
-
 @app.route("/generated-docs", methods=["GET"])
 @jwt_required()
 def get_generated_docs():
     current_user_id = int(get_jwt_identity())
     category = request.args.get("category", None)
+    company = request.args.get("company")
 
     query = GeneratedDoc.query.filter_by(user_id=current_user_id)
 
     if category:
-        query = query.filter(GeneratedDoc.category.ilike(category))
+        query = query.filter(
+            db.func.lower(db.func.trim(GeneratedDoc.category)) == category.strip().lower()
+        )
 
-    print("Requested category:", category)
+    if company:
+        query = query.filter(
+            db.func.lower(db.func.trim(GeneratedDoc.company)) == company.strip().lower()
+        )
 
     docs = query.order_by(GeneratedDoc.created_at.desc()).all()
 
@@ -904,21 +613,11 @@ def get_generated_docs():
             "row_id": d.row_id,
             "file_name": d.file_name,
             "category": d.category,
+            "company": d.company,
             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "source": "GeneratedDoc"
         } for d in docs
     ])
-
-# @app.route("/download-generated-file/<file_name>", methods=["GET"])
-# @jwt_required()
-# def download_generated_file(file_name):
-#     current_user_id = int(get_jwt_identity())
-#     doc = GeneratedDoc.query.filter_by(file_name=file_name, user_id=current_user_id).first()
-#     if not doc:
-#         return {"error": "File not found or access denied"}, 404
-
-#     file_path = os.path.join(OUTPUT_DIR, file_name)
-#     return send_file(file_path, as_attachment=True)
 
 @app.route("/download-generated-file/<file_name>", methods=["GET"])
 @jwt_required()
@@ -943,17 +642,6 @@ def init_db():
         return {"message": "Database initialized successfully!"}
     except Exception as e:
         return {"error": str(e)}, 500
-
-# @app.route("/categories", methods=["GET"])
-# def get_categories():
-#     return jsonify({
-#         name: {
-#             "excel_columns": cfg["excel_columns"],
-#             "mandays": list(cfg["templates"].keys())
-#         }
-#         for name, cfg in CATEGORY_CONFIG.items()
-#     })
-
 
 ## Admin Routes
 
@@ -1013,25 +701,13 @@ def get_all_files():
     if not user or user.role != "admin":
         return {"error": "Unauthorized"}, 403
 
-    user_id = request.args.get("user_id")  # optional filter
+    user_id = request.args.get("user_id")
     files_data = []
 
     if user_id:
-        # user_files = UserFile.query.filter_by(user_id=user_id).all()
         generated_files = GeneratedDoc.query.filter_by(user_id=user_id).all()
     else:
-        # user_files = UserFile.query.all()
         generated_files = GeneratedDoc.query.all()
-
-    # for f in user_files:
-    #     files_data.append({
-    #         "id": f.id,
-    #         "file_name": f.file_name,
-    #         "category": f.category,
-    #         "uploaded_at": f.uploaded_at,
-    #         "user": f.user.username,
-    #         "source": "uploaded"
-    #     })
 
     for g in generated_files:
         files_data.append({
@@ -1051,7 +727,6 @@ def download_file(source, file_id):
     current_user_id = int(get_jwt_identity())
     user = User.query.get(current_user_id)
 
-    # ✅ Only admins can download all files
     if not user or user.role != "admin":
         return {"error": "Unauthorized"}, 403
 
@@ -1099,363 +774,12 @@ def get_all_generated_docs():
 
 ########################################## CHECKLIST CODE  ###########################################
 
-# @app.route("/generate-checklist/<int:file_id>/<int:row_id>", methods=["GET"])
-# @jwt_required()
-# def generate_checklist(file_id, row_id):
-#     try:
-#         current_user_id = int(get_jwt_identity())
-
-#         # --- Find the uploaded file ---
-#         user_file = UserFile.query.filter_by(
-#             id=file_id,
-#             user_id=current_user_id,
-#             source_type="uploaded"
-#         ).first()
-#         if not user_file:
-#             return jsonify({"error": "File not found or access denied"}), 404
-
-#         category = user_file.category.upper()  # QMS, EMS, OHSAS
-
-#         # --- Pick checklist template for category ---
-#         template_file = CATEGORY_CHECKLIST_TEMPLATES.get(category)
-#         if not template_file or not os.path.exists(template_file):
-#             return jsonify({"error": f"Checklist template not found for {category}"}), 400
-
-#         # --- Load Excel or CSV ---
-#         ext = user_file.file_path.lower().split(".")[-1]
-#         if ext in ["xlsm", "xlsx"]:
-#             xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
-#         elif ext == "xls":
-#             xl = pd.ExcelFile(user_file.file_path, engine="xlrd")
-#         elif ext == "csv":
-#             df_checklist = pd.read_csv(user_file.file_path)
-#             xl = None
-#         else:
-#             return jsonify({"error": f"Unsupported file type: {ext}"}), 400
-
-#         # --- Load checklist sheet ---
-#         if xl:
-#             # find the checklist sheet dynamically
-#             sheet_candidates = [s for s in xl.sheet_names if category in s and "Checklist" in s]
-#             if not sheet_candidates:
-#                 return jsonify({"error": f"No checklist sheet found for {category}"}), 404
-#             sheet_name = sheet_candidates[0]
-#             df_checklist = xl.parse(sheet_name=sheet_name)
-
-#         df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
-#         df_checklist.reset_index(inplace=True)
-#         df_checklist.rename(columns={"index": "id"}, inplace=True)
-#         df_checklist["id"] = df_checklist["id"] + 1
-
-#         # --- Fetch the specific row from checklist ---
-#         row = df_checklist[df_checklist["id"] == row_id].to_dict(orient="records")
-#         if not row:
-#             return jsonify({"error": "Row not found in checklist sheet"}), 404
-#         row_data = row[0]
-
-#         # --- Load category-specific master sheet ---
-#         if xl:
-#             sheet_name_map = {
-#                 "QMS": "QMS 2025",
-#                 "EMS": "EMS 2025",
-#                 "OHSMS": "OHSMS 2025"
-#             }
-#             df_master = xl.parse(sheet_name=sheet_name_map.get(category, "Sheet1"))
-#             df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
-#         else:
-#             df_master = pd.DataFrame()  # CSV case
-
-#         # --- Merge master sheet data if matching ---
-#         if not df_master.empty:
-#             certificate_no = row_data.get("Certificate_No")
-#             master_row = df_master[df_master["Certificate_No"] == certificate_no].to_dict(orient="records")
-#             master_data = master_row[0] if master_row else {}
-#         else:
-#             master_data = {}
-
-#         # --- Prepare context ---
-#         context = {}
-
-#         org_name = master_data.get("Organization_Name") or row_data.get("Organization_Name") or f"record_{file_id}_{row_id}"
-#         context["Organization_Name"] = org_name
-
-#         # Master sheet columns first
-#         for col in CATEGORY_COLUMNS.get(category, []):
-#             context[col] = row_data.get(col) or master_data.get(col) or "NA"
-#             if isinstance(context[col], pd.Timestamp):
-#                 context[col] = context[col].strftime("%d-%m-%Y")
-
-#         # Checklist-specific columns (add if not already present)
-#         for col in df_checklist.columns:
-#             if col not in context:
-#                 context[col] = row_data.get(col, "NA")
-#                 if isinstance(context[col], pd.Timestamp):
-#                     context[col] = context[col].strftime("%d-%m-%Y")
-
-#         # --- Render template ---
-#         doc = DocxTemplate(template_file)
-#         doc.render(context)
-
-#         # --- Save output ---
-#         # org_name = context.get("Organization_Name", f"record_{file_id}_{row_id}")
-#         # base_name = make_browser_safe_filename(org_name, category)
-#         # file_name_safe = f"{base_name}_{category}_checklist.docx"
-#         # output_path = os.path.join(OUTPUT_DIR, file_name_safe)
-#         # doc.save(output_path)
-
-#         print("Checklist columns:", df_checklist.columns.tolist())
-#         print("Row data fetched:", row_data)
-#         print("Org name value:", row_data.get("Organization_Name"))
-
-
-#         # org_name = context.get("Organization_Name", f"record_{file_id}_{row_id}")
-#         # # org_name = context.get("Organization_Name")
-#         # print(org_name)
-
-#         # sanitize org_name (replace spaces and unsafe chars with "_")
-#         org_name_safe = re.sub(r"[^\w]", "_", org_name)
-#         org_name_safe = re.sub(r"_+", "_", org_name_safe).strip("_")
-#         print(org_name_safe)
-
-#         # ✅ Final checklist filename
-#         file_name_safe = f"{org_name_safe}_{category}_checklist.docx"
-#         print(file_name_safe)
-#         output_path = os.path.join(OUTPUT_DIR, file_name_safe)
-#         doc.save(output_path)
-
-#         # --- Save to DB ---
-#         with open(output_path, "rb") as f:
-#             new_record = ChecklistDoc(
-#                 row_id=row_id,
-#                 file_name=file_name_safe,
-#                 file_data=f.read(),
-#                 user_id=current_user_id,
-#                 category=category
-#             )
-#             db.session.add(new_record)
-#             db.session.commit()
-
-#         return send_file(
-#             output_path,
-#             as_attachment=True,
-#             download_name=file_name_safe,
-#             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-#         )
-
-#     except Exception as e:
-#         print("❌ Error in generate_checklist:", str(e))
-#         traceback.print_exc()
-#         db.session.rollback()
-#         return jsonify({"error": str(e)}), 500
-
-# @app.route("/generate-checklist/<int:file_id>/<int:row_id>", methods=["GET"])
-# @jwt_required()
-# def generate_checklist(file_id, row_id):
-#     try:
-#         current_user_id = int(get_jwt_identity())
-
-#         # --- Find the uploaded file ---
-#         user_file = UserFile.query.filter_by(
-#             id=file_id,
-#             user_id=current_user_id,
-#             source_type="uploaded"
-#         ).first()
-#         if not user_file:
-#             return jsonify({"error": "File not found or access denied"}), 404
-
-#         category = user_file.category.upper()  # QMS, EMS, OHSMS
-
-#         # --- Pick checklist template ---
-#         # template_file = CATEGORY_CHECKLIST_TEMPLATES.get(category)
-#         # if not template_file or not os.path.exists(template_file):
-#         #     return jsonify({"error": f"Checklist template not found for {category}"}), 400
-
-#         template_candidates = CATEGORY_CHECKLIST_TEMPLATES.get(category, [])
-#         if not template_candidates:
-#             return jsonify({"error": f"No checklist templates found for {category}"}), 400
-
-#         template_file = random.choice(template_candidates)  # ✅ random selection
-#         if not os.path.exists(template_file):
-#             return jsonify({"error": f"Template file not found: {template_file}"}), 400
-
-#         # --- Load Excel ---
-#         xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
-        
-#         # ✅ Load master sheet (e.g. QMS 2025)
-#         sheet_name_map = {
-#             "QMS": "QMS 2025",
-#             "EMS": "EMS 2025",
-#             "OHSMS": "OHSMS 2025"
-#         }
-#         df_master = xl.parse(sheet_name_map.get(category, "Sheet1"))
-#         df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
-
-#         # ✅ Load checklist sheet
-#         sheet_candidates = [s for s in xl.sheet_names if category in s and "Checklist" in s]
-#         if not sheet_candidates:
-#             return jsonify({"error": f"No checklist sheet found for {category}"}), 404
-#         df_checklist = xl.parse(sheet_candidates[0])
-#         df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
-
-#         # --- Get row from doc sheet by row_id ---
-#         master_row = df_master.reset_index()
-#         master_row.rename(columns={"index": "id"}, inplace=True)
-#         master_row["id"] = master_row["id"] + 1
-
-#         selected_row = master_row[master_row["id"] == row_id].to_dict(orient="records")
-#         if not selected_row:
-#             return jsonify({"error": "Row not found in doc sheet"}), 404
-
-#         master_data = selected_row[0]
-#         certificate_no = master_data.get("Certificate_No")
-
-#         # --- Match checklist row by Certificate_No ---
-#         checklist_row = df_checklist[df_checklist["Certificate_No"] == certificate_no].to_dict(orient="records")
-#         if not checklist_row:
-#             return jsonify({"error": f"No checklist entry found for Certificate_No {certificate_no}"}), 404
-
-#         row_data = checklist_row[0]
-
-#         # --- Merge master + checklist ---
-#         context = {**master_data, **row_data}
-#         for k, v in context.items():
-#             if isinstance(v, pd.Timestamp):
-#                 context[k] = v.strftime("%d-%m-%Y")
-#             elif pd.isna(v):
-#                 context[k] = "NA"
-
-#         # --- Render checklist doc ---
-#         doc = DocxTemplate(template_file)
-#         doc.render(context)
-
-#         org_name = context.get("Organization_Name", f"record_{file_id}_{row_id}")
-#         org_name_safe = re.sub(r"[^\w]", "_", org_name).strip("_")
-#         file_name_safe = f"{org_name_safe}_{category}_checklist.docx"
-
-#         output_path = os.path.join(OUTPUT_DIR, file_name_safe)
-#         doc.save(output_path)
-
-#         # --- Save in DB ---
-#         with open(output_path, "rb") as f:
-#             new_record = ChecklistDoc(
-#                 row_id=row_id,
-#                 file_name=file_name_safe,
-#                 file_data=f.read(),
-#                 user_id=current_user_id,
-#                 category=category
-#             )
-#             db.session.add(new_record)
-#             db.session.commit()
-
-#         return send_file(output_path, as_attachment=True, download_name=file_name_safe)
-
-#     except Exception as e:
-#         traceback.print_exc()
-#         db.session.rollback()
-#         return jsonify({"error": str(e)}), 500
-
-# @app.route("/generate-checklist/<int:file_id>/<int:row_id>", methods=["GET"])
-# @jwt_required()
-# def generate_checklist(file_id, row_id):
-#     try:
-#         current_user_id = int(get_jwt_identity())
-
-#         # --- Find the uploaded file ---
-#         user_file = UserFile.query.filter_by(
-#             id=file_id,
-#             user_id=current_user_id,
-#             source_type="uploaded"
-#         ).first()
-#         if not user_file:
-#             return jsonify({"error": "File not found or access denied"}), 404
-
-#         category = user_file.category.upper()
-
-#         # --- Pick checklist template ---
-#         template_candidates = CATEGORY_CHECKLIST_TEMPLATES.get(category, [])
-#         if not template_candidates:
-#             return jsonify({"error": f"No checklist templates found for {category}"}), 400
-#         template_file = random.choice(template_candidates)
-#         if not os.path.exists(template_file):
-#             return jsonify({"error": f"Template file not found: {template_file}"}), 400
-
-#         # --- Load Excel ---
-#         xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
-#         sheet_name_map = {"QMS": "QMS 2025", "EMS": "EMS 2025", "OHSMS": "OHSMS 2025"}
-#         df_master = xl.parse(sheet_name_map.get(category, "Sheet1"))
-#         df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
-
-#         sheet_candidates = [s for s in xl.sheet_names if category in s and "Checklist" in s]
-#         if not sheet_candidates:
-#             return jsonify({"error": f"No checklist sheet found for {category}"}), 404
-#         df_checklist = xl.parse(sheet_candidates[0])
-#         df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
-
-#         # --- Get row from master sheet ---
-#         master_row = df_master.reset_index()
-#         master_row.rename(columns={"index": "id"}, inplace=True)
-#         master_row["id"] = master_row["id"] + 1
-
-#         selected_row = master_row[master_row["id"] == row_id].to_dict(orient="records")
-#         if not selected_row:
-#             return jsonify({"error": "Row not found in master sheet"}), 404
-#         master_data = selected_row[0]
-#         certificate_no = master_data.get("Certificate_No")
-
-#         # --- Match checklist row by Certificate_No ---
-#         checklist_row = df_checklist[df_checklist["Certificate_No"] == certificate_no].to_dict(orient="records")
-#         if not checklist_row:
-#             return jsonify({"error": f"No checklist entry found for Certificate_No {certificate_no}"}), 404
-#         row_data = checklist_row[0]
-
-#         # --- Merge master + checklist ---
-#         context = {**master_data, **row_data}
-#         for k, v in context.items():
-#             if isinstance(v, pd.Timestamp):
-#                 context[k] = v.strftime("%d-%m-%Y")
-#             elif pd.isna(v):
-#                 context[k] = "NA"
-#             elif isinstance(v, str):
-#                 # Only replace & with &amp; so Word can render it
-#                 context[k] = v.replace("&", "&amp;")
-
-#         # --- Render checklist doc ---
-#         doc = DocxTemplate(template_file)
-#         doc.render(context)
-
-#         org_name = context.get("Organization_Name", f"record_{file_id}_{row_id}")
-#         org_name_safe = re.sub(r"[^\w]", "_", org_name).strip("_")
-#         file_name_safe = f"{org_name_safe}_{category}_checklist.docx"
-
-#         output_path = os.path.join(OUTPUT_DIR, file_name_safe)
-#         doc.save(output_path)
-
-#         # --- Save in DB ---
-#         with open(output_path, "rb") as f:
-#             new_record = ChecklistDoc(
-#                 row_id=row_id,
-#                 file_name=file_name_safe,
-#                 file_data=f.read(),
-#                 user_id=current_user_id,
-#                 category=category
-#             )
-#             db.session.add(new_record)
-#             db.session.commit()
-
-#         return send_file(output_path, as_attachment=True, download_name=file_name_safe)
-
-#     except Exception as e:
-#         traceback.print_exc()
-#         db.session.rollback()
-#         return jsonify({"error": str(e)}), 500
-
 @app.route("/generate-checklist/<int:file_id>/<int:row_id>", methods=["GET"])
 @jwt_required()
 def generate_checklist(file_id, row_id):
     try:
         current_user_id = int(get_jwt_identity())
 
-        # --- Find the uploaded file ---
         user_file = UserFile.query.filter_by(
             id=file_id,
             user_id=current_user_id,
@@ -1465,102 +789,130 @@ def generate_checklist(file_id, row_id):
             return jsonify({"error": "File not found or access denied"}), 404
 
         category = user_file.category.upper()
+        company = request.args.get("company", user_file.company).upper()
 
-        # --- Pick checklist template ---
-        template_candidates = CATEGORY_CHECKLIST_TEMPLATES.get(category, [])
+        if company not in CATEGORY_CHECKLIST_TEMPLATES:
+            return jsonify({"error": f"Invalid company: {company}"}), 400
+
+        if category not in CATEGORY_CHECKLIST_TEMPLATES[company]:
+            return jsonify({"error": f"No checklist templates for {company} - {category}"}), 400
+
+        template_candidates = CATEGORY_CHECKLIST_TEMPLATES[company][category]
+
         if not template_candidates:
-            return jsonify({"error": f"No checklist templates found for {category}"}), 400
+            return jsonify({"error": f"No checklist templates found for {company}-{category}"}), 400
+
         template_file = random.choice(template_candidates)
+
         if not os.path.exists(template_file):
             return jsonify({"error": f"Template file not found: {template_file}"}), 400
 
-        # --- Load Excel ---
-        xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
+        ext = user_file.file_path.lower().split(".")[-1]
 
-        # Include IMS in sheet name map
+        if ext in ["xlsm", "xlsx"]:
+            xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
+        elif ext == "xls":
+            xl = pd.ExcelFile(user_file.file_path, engine="xlrd")
+        elif ext == "csv":
+            return jsonify({"error": "Checklist generation not supported for CSV"}), 400
+        else:
+            return jsonify({"error": f"Unsupported file type: {ext}"}), 400
+
+        print("Sheets found in Excel:", xl.sheet_names)
+
         sheet_name_map = {
             "QMS": "QMS 2025",
             "EMS": "EMS 2025",
             "OHSMS": "OHSMS 2025",
-            "IMS": "IMS 2025"
+            "IMS": "IMS 2025",
         }
 
-        print("Sheets found in Excel:", xl.sheet_names)
+        main_sheet = sheet_name_map.get(category)
 
-        df_master = xl.parse(sheet_name_map.get(category, "Sheet1"))
+        if main_sheet not in xl.sheet_names:
+            return jsonify({"error": f"Master sheet '{main_sheet}' not found"}), 400
+
+        df_master = xl.parse(main_sheet)
         df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
 
-        # --- Find Checklist Sheet ---
         sheet_candidates = [s for s in xl.sheet_names if category in s and "Checklist" in s]
+
         if not sheet_candidates:
             return jsonify({"error": f"No checklist sheet found for {category}"}), 404
 
         df_checklist = xl.parse(sheet_candidates[0])
         df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
 
-        # --- Get master row ---
         master_row = df_master.reset_index()
         master_row.rename(columns={"index": "id"}, inplace=True)
         master_row["id"] = master_row["id"] + 1
 
         selected_row = master_row[master_row["id"] == row_id].to_dict(orient="records")
+
         if not selected_row:
             return jsonify({"error": "Row not found in master sheet"}), 404
 
         master_data = selected_row[0]
 
-        # --- Determine Certificate No based on category ---
-        if category == "IMS":
-            match_column = "Certificate_No_QMS"
-            certificate_no = master_data.get(match_column)
-        else:
-            match_column = "Certificate_No"
-            certificate_no = master_data.get(match_column)
+        match_column = "Certificate_No_QMS" if category == "IMS" else "Certificate_No"
+        certificate_no = master_data.get(match_column)
 
         if not certificate_no or str(certificate_no).strip().lower() in ["", "none", "null"]:
-            return jsonify({"error": f"No valid certificate number found for {category}"}), 400
+            return jsonify({"error": f"No valid {match_column} found for row"}), 400
 
-        # --- Match checklist row ---
         if match_column not in df_checklist.columns:
-            return jsonify({"error": f"Checklist sheet missing expected column {match_column}"}), 400
+            return jsonify({"error": f"Checklist missing required column {match_column}"}), 400
 
         checklist_row = df_checklist[df_checklist[match_column] == certificate_no].to_dict(orient="records")
+
         if not checklist_row:
-            return jsonify({"error": f"No checklist entry found for {match_column} = {certificate_no}"}), 404
+            return jsonify({"error": f"No checklist entry for {match_column} = {certificate_no}"}), 404
 
         row_data = checklist_row[0]
 
-        # --- Merge data ---
         context = {**master_data, **row_data}
+
         for k, v in context.items():
             if isinstance(v, pd.Timestamp):
                 context[k] = v.strftime("%d-%m-%Y")
             elif pd.isna(v) or str(v).strip().lower() == "null":
                 context[k] = "NA"
             elif isinstance(v, str):
-                context[k] = v.replace("&", "&amp;")
+                context[k] = v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-        # --- Render DOCX ---
         doc = DocxTemplate(template_file)
         doc.render(context)
 
         org_name = context.get("Organization_Name", f"record_{file_id}_{row_id}")
         org_name_safe = re.sub(r"[^\w]", "_", org_name).strip("_")
+
         file_name_safe = f"{org_name_safe}_{category}_checklist.docx"
         output_path = os.path.join(OUTPUT_DIR, file_name_safe)
+
         doc.save(output_path)
 
-        # --- Save to DB ---
         with open(output_path, "rb") as f:
             new_record = ChecklistDoc(
                 row_id=row_id,
                 file_name=file_name_safe,
                 file_data=f.read(),
                 user_id=current_user_id,
-                category=category
+                category=category,
+                company=company
             )
             db.session.add(new_record)
-            db.session.commit()
+
+        generated_file = UserFile(
+            user_id=current_user_id,
+            file_name=file_name_safe,
+            file_path=output_path,
+            source_type="generated",
+            category=category,
+            company=company
+        )
+        db.session.add(generated_file)
+
+        db.session.commit()
 
         return send_file(output_path, as_attachment=True, download_name=file_name_safe)
 
@@ -1574,15 +926,13 @@ def generate_checklist(file_id, row_id):
 def delete_generated_doc(category, row_id):
     try:
         current_user_id = int(get_jwt_identity())
-        category = category.upper()  # ensure consistent casing
+        category = category.upper()
 
-        # Find generated document(s) for this row by this user and category
         docs = GeneratedDoc.query.filter_by(row_id=row_id, user_id=current_user_id, category=category).all()
         if not docs:
             return jsonify({"error": "Generated document not found"}), 404
 
         for doc in docs:
-            # Delete the file from disk
             file_path = os.path.join(OUTPUT_DIR, doc.file_name)
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -1601,9 +951,8 @@ def delete_generated_doc(category, row_id):
 def delete_checklist(category, row_id):
     try:
         current_user_id = int(get_jwt_identity())
-        category = category.upper()  # ensure consistent casing
+        category = category.upper()
 
-        # Delete Checklist documents for this row, user, and category
         checklist_docs = ChecklistDoc.query.filter_by(
             row_id=row_id, user_id=current_user_id, category=category
         ).all()
@@ -1624,34 +973,25 @@ def delete_checklist(category, row_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-# @app.route("/generated-checklists", methods=["GET"])
-# @jwt_required()
-# def get_generated_checklists():
-#     current_user_id = int(get_jwt_identity())
-#     docs = ChecklistDoc.query.filter_by(user_id=current_user_id).order_by(ChecklistDoc.created_at.desc()).all()
-#     return jsonify([
-#         {
-#             "id": d.id,
-#             "row_id": d.row_id,
-#             "file_name": d.file_name,
-#             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S")
-#         } for d in docs
-#     ])
-
-
 @app.route("/generated-checklists", methods=["GET"])
 @jwt_required()
 def get_generated_checklists():
     current_user_id = int(get_jwt_identity())
+
     category = request.args.get("category", None)
+    company = request.args.get("company", None)
 
     query = ChecklistDoc.query.filter_by(user_id=current_user_id)
 
     if category:
-        # Case-insensitive and space-trimmed comparison
-        query = query.filter(db.func.lower(db.func.trim(ChecklistDoc.category)) == category.strip().lower())
+        query = query.filter(
+            db.func.lower(db.func.trim(ChecklistDoc.category)) == category.strip().lower()
+        )
 
-    print("Requested checklist category:", category)
+    if company:
+        query = query.filter(
+            db.func.lower(db.func.trim(ChecklistDoc.company)) == company.strip().lower()
+        )
 
     docs = query.order_by(ChecklistDoc.created_at.desc()).all()
 
@@ -1661,11 +1001,11 @@ def get_generated_checklists():
             "row_id": d.row_id,
             "file_name": d.file_name,
             "category": d.category,
+            "company": d.company,
             "created_at": d.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "source": "ChecklistDoc"
         } for d in docs
     ])
-
 
 @app.route("/download-checklist-file/<file_name>", methods=["GET"])
 @jwt_required()

@@ -10,7 +10,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)  # hashed password
+    password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(20), default="user")
 
     def set_password(self, raw_password):
@@ -21,36 +21,17 @@ class User(db.Model):
         """Verify password"""
         return bcrypt.check_password_hash(self.password, raw_password)
 
-# class GeneratedDoc(db.Model):
-#     __tablename__ = "generated_docs"
-
-#     id = db.Column(db.Integer, primary_key=True)
-#     row_id = db.Column(db.Integer, nullable=False)  # Excel row id
-#     file_name = db.Column(db.String(255), nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-# class GeneratedDoc(db.Model):
-#     __tablename__ = "generated_docs"
-
-#     id = db.Column(db.Integer, primary_key=True)
-#     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-#     row_id = db.Column(db.Integer, nullable=False)
-#     file_name = db.Column(db.String(255), nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-#     user = db.relationship("User", backref="generated_docs")
-
-
 class UserFile(db.Model):
     __tablename__ = "user_files"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     file_name = db.Column(db.String(255), nullable=False)
-    file_path = db.Column(db.String(500), nullable=True)  # optional if downloaded
+    file_path = db.Column(db.String(500), nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    source_type = db.Column(db.String(20), default="uploaded")  # uploaded / downloaded
+    source_type = db.Column(db.String(20), default="uploaded")
     category = db.Column(db.String(50), nullable=False)
+    company = db.Column(db.String(50), nullable=False)
 
 
     user = db.relationship("User", backref="files")
@@ -60,9 +41,10 @@ class GeneratedDoc(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     row_id = db.Column(db.Integer, nullable=False)
     file_name = db.Column(db.String(255), nullable=False)
-    file_data = db.Column(db.LargeBinary, nullable=False)  # Store bytes here
+    file_data = db.Column(db.LargeBinary, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     category = db.Column(db.String(50), nullable=False)
+    company = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="generated_docs")
@@ -71,11 +53,13 @@ class ChecklistDoc(db.Model):
     __tablename__ = "checklist_docs"
 
     id = db.Column(db.Integer, primary_key=True)
-    row_id = db.Column(db.Integer, nullable=False)   # Excel row id used
+    row_id = db.Column(db.Integer, nullable=False)
     file_name = db.Column(db.String(255), nullable=False)
-    file_data = db.Column(db.LargeBinary, nullable=False)  # Store .docx bytes
+    file_data = db.Column(db.LargeBinary, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    category = db.Column(db.String(50), nullable=False)  # QMS, EMS, OHSMS, etc.
+    category = db.Column(db.String(50), nullable=False)
+    company = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="checklist_docs")
+
