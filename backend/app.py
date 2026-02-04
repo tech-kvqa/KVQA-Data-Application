@@ -164,6 +164,9 @@ CATEGORY_TEMPLATES = {
             "8_manday": os.path.join(TEMPLATES_DIR, "CSPL/ims_8_manday.docx"),
             "9_manday": os.path.join(TEMPLATES_DIR, "CSPL/ims_9_manday.docx"),
             "10_manday": os.path.join(TEMPLATES_DIR, "CSPL/ims_10_manday.docx"),
+        },
+        "ISMS":{
+            "7_manday": os.path.join(TEMPLATES_DIR, "CSPL/isms_7_manday.docx")
         }
     }, 
 }
@@ -231,6 +234,16 @@ CATEGORY_COLUMNS = {
         'IMS_objective_NO', 'IMS_OBJECTIVE', 'legal_REGISTER_NO', 'legal_LICENSE', 'HIRA_NO', 
         'risk_AND_MITIGATION', 'HIRA_Comments', 'ASPECT_IMPACT_NO', 'ASPECT_IMPACT_COMMENT', 
         'Planning_the_stage_2'
+    ],
+    "ISMS":[
+        'S.No', 'Certificate_Issue_Date', 'Surveillance_1_date', 'Surveillance_2_date', 
+        'certification_audit_conducted', 'Closure_Date', 'Starting_Date', 'manual_date', 
+        'Internal_Audit_Date', 'MRM_Date', 'Stage_1_Date', 'stage_1_schedule_date', 'Stage_2_Date', 
+        'stage_2_schedule_date', 'Questionnaire_date', 'Quotation_date', 'contract_review_Date', 
+        'Certificate_No', 'Organization_Name', 'Address', 'Certification_Site', 'SOA_Version', 
+        'Risk_Assessment_Methodology', 'Risk_Register_Version', 'Scope_s', 'Compliance_manager', 
+        'MANDAY', 'stage_1_manday', 'stage_2_manday', 'Risk_Category', 'NO_OF_EMPLOYEE', 'audit_number', 
+        'Lead_Auditor', 'Auditor', 'Verification_Auditor'
     ]
 }
 
@@ -364,8 +377,19 @@ def generate_docx(file_id, row_id):
         row_data = row[0]
 
         for k, v in row_data.items():
-            if isinstance(v, str):
-                row_data[k] = v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+            if isinstance(v, (pd.Timestamp, datetime)):
+                row_data[k] = v.strftime("%d-%m-%Y")
+
+            elif isinstance(v, str):
+                row_data[k] = (
+                    v.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                )
+
+            elif pd.isna(v):
+                row_data[k] = ""
 
         doc = DocxTemplate(template_file)
         doc.render(row_data)
@@ -384,7 +408,7 @@ def generate_docx(file_id, row_id):
                 file_data=f.read(),
                 user_id=current_user_id,
                 category=category,
-                company=company
+                company=company 
             )
         db.session.add(new_doc)
 
