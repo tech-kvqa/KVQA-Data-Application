@@ -75,6 +75,46 @@ with app.app_context():
     db.create_all()
     seed_initial_admin()
 
+def read_vertical_excel_as_df(file_path, engine="openpyxl"):
+    """
+    Reads CSPL + ISMS vertical Excel and returns a DataFrame
+    with columns = field names and rows = records.
+    
+    Assumptions:
+    - Column 0 = field names
+    - Column 1..N = values for each record
+    - Each record can occupy multiple columns (like Excel export)
+    """
+    import pandas as pd
+
+    # Read Excel without header
+    df_raw = pd.read_excel(file_path, engine=engine, header=None, keep_default_na=False)
+
+    # Drop fully empty rows
+    df_raw = df_raw.dropna(how="all")
+
+    if df_raw.shape[1] < 2:
+        raise ValueError("Excel must have at least two columns (field, value)")
+
+    # Field names in first column
+    keys = df_raw.iloc[:, 0].astype(str).str.strip()
+
+    # Values: all remaining columns, transpose if needed
+    values = df_raw.iloc[:, 1:]
+
+    # If multiple columns, each column represents a record
+    records = []
+    for col_idx in range(values.shape[1]):
+        record_values = values.iloc[:, col_idx].tolist()
+        record = dict(zip(keys, record_values))
+        records.append(record)
+
+    df = pd.DataFrame(records)
+    # Clean column names
+    df.columns = [c.strip().replace(" ", "_") for c in df.columns]
+
+    return df
+
 
 @app.route('/')
 def home():
@@ -436,12 +476,193 @@ def generate_docx(file_id, row_id):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
+@app.route("/generate-docx-isms/<int:file_id>", methods=["GET"])
+@jwt_required()
+def generate_docx_isms(file_id):
+    """
+    Generates DOCX from vertical ISMS Excel.
+    Frontend passes ?col_id=1 (Column B), 2 (Column C), etc.
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+
+        # Fetch uploaded ISMS Excel
+        user_file = UserFile.query.filter_by(
+            id=file_id,
+            user_id=current_user_id,
+            category="ISMS",
+            company="CSPL",
+            source_type="uploaded"
+        ).first()
+
+        if not user_file or not os.path.exists(user_file.file_path):
+            return jsonify({"error": "ISMS file not found or missing"}), 404
+
+        # Load ISMS template
+        isms_templates = CATEGORY_TEMPLATES.get("CSPL", {}).get("ISMS", {})
+        if not isms_templates:
+            return jsonify({"error": "No ISMS templates configured"}), 400
+
+        template_path = list(isms_templates.values())[0]
+        if not os.path.exists(template_path):
+            return jsonify({"error": "ISMS template file missing"}), 400
+
+        # Read Excel (vertical format)
+        ext = user_file.file_path.lower().split(".")[-1]
+        engine = "openpyxl" if ext in ["xlsx", "xlsm"] else None
+        df_raw = pd.read_excel(user_file.file_path, engine=engine, header=None, keep_default_na=False)
+
+        if df_raw.empty or df_raw.shape[1] < 2:
+            return jsonify({"error": "Excel contains no data"}), 400
+
+        # Determine column to generate
+        col_id = int(request.args.get("col_id", 1))  # Column B = 1
+        if col_id <= 0 or col_id >= df_raw.shape[1]:
+            return jsonify({"error": "Invalid col_id"}), 400
+
+        # Column A = field names, Column col_id = values
+        field_names = df_raw.iloc[:, 0].astype(str).str.strip()
+        values = df_raw.iloc[:, col_id]
+
+        # Build dictionary for DOCX
+        clean_data = {}
+        for key, val in zip(field_names, values):
+            key_safe = re.sub(r"[^\w]", "_", key)
+            if isinstance(val, (pd.Timestamp, datetime)):
+                clean_data[key_safe] = val.strftime("%d-%m-%Y")
+            elif pd.isna(val):
+                clean_data[key_safe] = ""
+            else:
+                clean_data[key_safe] = str(val)
+
+        # Render DOCX
+        doc = DocxTemplate(template_path)
+        doc.render(clean_data)
+
+        # Save output
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        org_name = clean_data.get("Organization_Name", f"ISMS_Record_{col_id}")
+        safe_org = re.sub(r"[^\w]", "_", org_name)
+        output_name = f"{safe_org}.docx"
+        output_path = os.path.join(OUTPUT_DIR, output_name)
+        doc.save(output_path)
+
+        # Store in DB
+        with open(output_path, "rb") as f:
+            gen_doc = GeneratedDoc(
+                row_id=col_id,
+                file_name=output_name,
+                file_data=f.read(),
+                user_id=current_user_id,
+                category="ISMS",
+                company="CSPL"
+            )
+            db.session.add(gen_doc)
+
+        db.session.add(UserFile(
+            user_id=current_user_id,
+            file_name=output_name,
+            file_path=output_path,
+            source_type="generated",
+            category="ISMS",
+            company="CSPL"
+        ))
+
+        db.session.commit()
+
+        # Send file
+        response = send_file(
+            output_path,
+            as_attachment=True,
+            download_name=output_name,
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+        return response
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+    
+# @app.route("/upload-file", methods=["POST"])
+# @jwt_required()
+# def upload_file():
+#     try:
+#         current_user_id = int(get_jwt_identity())
+
+#         if "file" not in request.files:
+#             return {"error": "No file uploaded"}, 400
+
+#         file = request.files["file"]
+#         if file.filename == "":
+#             return {"error": "No file selected"}, 400
+
+#         category = request.form.get("category")
+#         company = request.form.get("company", "").upper()
+#         print("Company:", company)
+#         print("Category:", category)
+
+#         if not category:
+#             return {"error": "Category is required"}, 400
+
+#         if company not in CATEGORY_TEMPLATES:
+#             return {"error": f"Invalid company: {company}"}, 400
+
+#         user_dir = os.path.join("uploads", str(current_user_id))
+#         os.makedirs(user_dir, exist_ok=True)
+#         file_path = os.path.join(user_dir, file.filename)
+#         file.save(file_path)
+
+#         ext = file.filename.lower().split(".")[-1]
+
+#         if ext in ["xlsm", "xlsx", "xls"]:
+#             df = pd.read_excel(file_path, engine="openpyxl")
+#         elif ext == "csv":
+#             try:
+#                 df = pd.read_csv(file_path, encoding="utf-8")
+#             except UnicodeDecodeError:
+#                 df = pd.read_csv(file_path, encoding="latin1")
+#         else:
+#             return {"error": f"Unsupported file format: {ext}"}, 400
+
+#         df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
+
+#         required_cols = CATEGORY_COLUMNS.get(category, [])
+#         missing = [col for col in required_cols if col not in df.columns]
+#         if missing:
+#             return {
+#                 "error": f"Uploaded file does not match expected format for {category}. Missing: {missing}"
+#             }, 400
+
+#         user_file = UserFile(
+#             user_id=current_user_id,
+#             file_name=file.filename,
+#             file_path=file_path,
+#             source_type="uploaded",
+#             category=category,
+#             company=company
+#         )
+#         db.session.add(user_file)
+#         db.session.commit()
+
+#         return {"message": "File uploaded successfully", "file_id": user_file.id}
+
+#     except Exception as e:
+#         db.session.rollback()
+#         return {"error": str(e)}, 500
+
+
 @app.route("/upload-file", methods=["POST"])
 @jwt_required()
 def upload_file():
     try:
         current_user_id = int(get_jwt_identity())
 
+        # ----------------------------
+        # Basic validations
+        # ----------------------------
         if "file" not in request.files:
             return {"error": "No file uploaded"}, 400
 
@@ -451,8 +672,6 @@ def upload_file():
 
         category = request.form.get("category")
         company = request.form.get("company", "").upper()
-        print("Company:", company)
-        print("Category:", category)
 
         if not category:
             return {"error": "Category is required"}, 400
@@ -460,32 +679,76 @@ def upload_file():
         if company not in CATEGORY_TEMPLATES:
             return {"error": f"Invalid company: {company}"}, 400
 
+        # ----------------------------
+        # Detect vertical ISMS format
+        # ----------------------------
+        is_vertical_isms = (category.upper() == "ISMS" and company == "CSPL")
+
+        # ----------------------------
+        # Save uploaded file
+        # ----------------------------
         user_dir = os.path.join("uploads", str(current_user_id))
         os.makedirs(user_dir, exist_ok=True)
+
         file_path = os.path.join(user_dir, file.filename)
         file.save(file_path)
 
         ext = file.filename.lower().split(".")[-1]
 
-        if ext in ["xlsm", "xlsx", "xls"]:
-            df = pd.read_excel(file_path, engine="openpyxl")
+        # ----------------------------
+        # Read file
+        # ----------------------------
+        if ext in ["xls", "xlsx", "xlsm"]:
+            if is_vertical_isms:
+                # 🔴 Vertical ISMS → NO HEADER
+                df = pd.read_excel(file_path, engine="openpyxl", header=None)
+            else:
+                # 🟢 Normal horizontal
+                df = pd.read_excel(file_path, engine="openpyxl")
+
         elif ext == "csv":
+            if is_vertical_isms:
+                return {"error": "ISMS vertical format supports Excel only"}, 400
+
             try:
                 df = pd.read_csv(file_path, encoding="utf-8")
             except UnicodeDecodeError:
                 df = pd.read_csv(file_path, encoding="latin1")
+
         else:
             return {"error": f"Unsupported file format: {ext}"}, 400
 
-        df.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df.columns]
+        # ----------------------------
+        # Column normalization (ONLY for horizontal files)
+        # ----------------------------
+        if not is_vertical_isms:
+            df.columns = [
+                str(c).strip().replace(" ", "_").replace("/", "_")
+                for c in df.columns
+            ]
 
-        required_cols = CATEGORY_COLUMNS.get(category, [])
-        missing = [col for col in required_cols if col not in df.columns]
-        if missing:
-            return {
-                "error": f"Uploaded file does not match expected format for {category}. Missing: {missing}"
-            }, 400
+        # ----------------------------
+        # Validate structure
+        # ----------------------------
+        if is_vertical_isms:
+            # Basic sanity check for vertical format
+            if df.shape[1] < 2:
+                return {
+                    "error": "Invalid ISMS format. Expected two columns (Field, Value)."
+                }, 400
+        else:
+            # Horizontal category validation
+            required_cols = CATEGORY_COLUMNS.get(category, [])
+            missing = [col for col in required_cols if col not in df.columns]
+            if missing:
+                return {
+                    "error": f"Uploaded file does not match expected format for {category}. "
+                             f"Missing columns: {missing}"
+                }, 400
 
+        # ----------------------------
+        # Save DB record
+        # ----------------------------
         user_file = UserFile(
             user_id=current_user_id,
             file_name=file.filename,
@@ -494,13 +757,18 @@ def upload_file():
             category=category,
             company=company
         )
+
         db.session.add(user_file)
         db.session.commit()
 
-        return {"message": "File uploaded successfully", "file_id": user_file.id}
+        return {
+            "message": "File uploaded successfully",
+            "file_id": user_file.id
+        }
 
     except Exception as e:
         db.session.rollback()
+        traceback.print_exc()
         return {"error": str(e)}, 500
 
 
@@ -517,6 +785,98 @@ def my_files():
             "source_type": f.source_type
         } for f in files
     ])
+
+# @app.route("/excel-rows/<int:file_id>", methods=["GET"])
+# @jwt_required()
+# def get_excel_rows(file_id):
+#     try:
+#         current_user_id = int(get_jwt_identity())
+#         user_file = UserFile.query.filter_by(id=file_id, user_id=current_user_id).first()
+#         if not user_file:
+#             return {"error": "File not found or access denied"}, 404
+
+#         ext = user_file.file_path.lower().split(".")[-1]
+
+#         if ext in ["xlsm", "xlsx"]:
+#             xl = pd.ExcelFile(user_file.file_path, engine="openpyxl")
+#         elif ext == "xls":
+#             xl = pd.ExcelFile(user_file.file_path, engine="xlrd")
+#         elif ext == "csv":
+#             df_master = pd.read_csv(user_file.file_path)
+#         else:
+#             return {"error": f"Unsupported file type: {ext}"}, 400
+
+#         category = user_file.category.upper()
+#         sheet_name_map = {
+#             "QMS": "QMS 2025",
+#             "EMS": "EMS 2025",
+#             "OHSMS": "OHSMS 2025",
+#             "IMS": "IMS 2025"
+#         }
+#         df_master = xl.parse(sheet_name_map.get(category, xl.sheet_names[0]))
+#         df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
+
+#         checklist_sheets = [s for s in xl.sheet_names if category in s and "Checklist" in s]
+
+#         if checklist_sheets:
+#             df_checklist = xl.parse(checklist_sheets[0])
+#             df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
+
+#             if category == "IMS" and "Certificate_No_QMS" in df_checklist.columns:
+#                 df_checklist["Certificate_No"] = df_checklist["Certificate_No_QMS"].astype(str).str.strip().str.upper()
+#             elif "Certificate_No" in df_checklist.columns:
+#                 df_checklist["Certificate_No"] = df_checklist["Certificate_No"].astype(str).str.strip().str.upper()
+
+#             checklist_certs = set(df_checklist["Certificate_No"].tolist())
+#         else:
+#             checklist_certs = set()
+
+#         df_master.reset_index(inplace=True)
+#         df_master.rename(columns={"index": "id"}, inplace=True)
+#         df_master["id"] = df_master["id"] + 1
+
+#         if category == "IMS":
+#             cert_col = "Certificate_No_QMS" if "Certificate_No_QMS" in df_master.columns else None
+#         else:
+#             cert_col = "Certificate_No" if "Certificate_No" in df_master.columns else None
+
+#         if cert_col:
+#             df_master["Certificate_No"] = (
+#                 df_master[cert_col].astype(str).str.strip().str.upper()
+#             )
+#         else:
+#             df_master["Certificate_No"] = None
+
+#         df_master["ChecklistAvailable"] = df_master["Certificate_No"].apply(lambda x: x in checklist_certs)
+
+#         generated_rows = {
+#             g.row_id
+#             for g in GeneratedDoc.query.filter_by(
+#                 user_id=current_user_id,
+#                 category=user_file.category,
+#                 company=user_file.company   # NEW ✔
+#             ).all()
+#         }
+
+#         df_master["Status"] = df_master["id"].apply(lambda x: "Generated" if x in generated_rows else "Pending")
+
+#         generated_checklists = {
+#             c.row_id
+#             for c in ChecklistDoc.query.filter_by(
+#                 user_id=current_user_id,
+#                 category=user_file.category,
+#                 company=user_file.company
+#             ).all()
+#         }
+        
+#         df_master["ChecklistGenerated"] = df_master["id"].apply(lambda x: x in generated_checklists)
+
+#         df_master = df_master.replace({np.nan: None, np.inf: None, -np.inf: None})
+
+#         return jsonify(df_master.to_dict(orient="records"))
+
+#     except Exception as e:
+#         return {"error": str(e)}, 500
 
 @app.route("/excel-rows/<int:file_id>", methods=["GET"])
 @jwt_required()
@@ -538,22 +898,54 @@ def get_excel_rows(file_id):
         else:
             return {"error": f"Unsupported file type: {ext}"}, 400
 
-        category = user_file.category.upper()
-        sheet_name_map = {
-            "QMS": "QMS 2025",
-            "EMS": "EMS 2025",
-            "OHSMS": "OHSMS 2025",
-            "IMS": "IMS 2025"
-        }
-        df_master = xl.parse(sheet_name_map.get(category, xl.sheet_names[0]))
-        df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
+        # --- Load master sheet ---
+        # category = user_file.category.upper()
+        # sheet_name_map = {
+        #     "QMS": "QMS 2025",
+        #     "EMS": "EMS 2025",
+        #     "OHSMS": "OHSMS 2025",
+        #     "IMS": "IMS 2025"
+        # }
+        # df_master = xl.parse(sheet_name_map.get(category, xl.sheet_names[0]))
 
+        category = user_file.category.upper()
+        company = user_file.company.upper()
+
+        # 🔴 SPECIAL CASE: CSPL + ISMS (vertical)
+        if company == "CSPL" and category == "ISMS":
+            df_master = read_vertical_excel_as_df(
+                user_file.file_path,
+                engine="openpyxl"
+            )
+
+        else:
+            sheet_name_map = {
+                "QMS": "QMS 2025",
+                "EMS": "EMS 2025",
+                "OHSMS": "OHSMS 2025",
+                "IMS": "IMS 2025"
+            }
+
+            df_master = xl.parse(sheet_name_map.get(category, xl.sheet_names[0]))
+            df_master.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_master.columns]
+
+        # --- Load checklist sheet ---
         checklist_sheets = [s for s in xl.sheet_names if category in s and "Checklist" in s]
+        # if checklist_sheets:
+        #     df_checklist = xl.parse(checklist_sheets[0])
+        #     df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
+        #     # Normalize Certificate_No
+        #     if "Certificate_No" in df_checklist.columns:
+        #         df_checklist["Certificate_No"] = df_checklist["Certificate_No"].astype(str).str.strip().str.upper()
+        #     checklist_certs = set(df_checklist["Certificate_No"].tolist())
+        # else:
+        #     checklist_certs = set()
 
         if checklist_sheets:
             df_checklist = xl.parse(checklist_sheets[0])
             df_checklist.columns = [c.strip().replace(" ", "_").replace("/", "_") for c in df_checklist.columns]
 
+            # For IMS, map Certificate_No_QMS
             if category == "IMS" and "Certificate_No_QMS" in df_checklist.columns:
                 df_checklist["Certificate_No"] = df_checklist["Certificate_No_QMS"].astype(str).str.strip().str.upper()
             elif "Certificate_No" in df_checklist.columns:
@@ -563,9 +955,13 @@ def get_excel_rows(file_id):
         else:
             checklist_certs = set()
 
+        # --- Prepare master rows ---
         df_master.reset_index(inplace=True)
         df_master.rename(columns={"index": "id"}, inplace=True)
         df_master["id"] = df_master["id"] + 1
+
+        # if "Certificate_No" in df_master.columns:
+        #     df_master["Certificate_No"] = df_master["Certificate_No"].astype(str).str.strip().str.upper()
 
         if category == "IMS":
             cert_col = "Certificate_No_QMS" if "Certificate_No_QMS" in df_master.columns else None
@@ -579,7 +975,14 @@ def get_excel_rows(file_id):
         else:
             df_master["Certificate_No"] = None
 
+        # Mark rows for which checklist exists
         df_master["ChecklistAvailable"] = df_master["Certificate_No"].apply(lambda x: x in checklist_certs)
+
+        # Mark rows already generated
+        # generated_rows = {
+        #     g.row_id
+        #     for g in GeneratedDoc.query.filter_by(user_id=current_user_id, category=user_file.category).all()
+        # }
 
         generated_rows = {
             g.row_id
@@ -592,12 +995,17 @@ def get_excel_rows(file_id):
 
         df_master["Status"] = df_master["id"].apply(lambda x: "Generated" if x in generated_rows else "Pending")
 
+        # generated_checklists = {
+        #     c.row_id
+        #     for c in ChecklistDoc.query.filter_by(user_id=current_user_id, category=user_file.category).all()
+        # }
+
         generated_checklists = {
             c.row_id
             for c in ChecklistDoc.query.filter_by(
                 user_id=current_user_id,
                 category=user_file.category,
-                company=user_file.company
+                company=user_file.company   # NEW ✔
             ).all()
         }
         
@@ -609,6 +1017,7 @@ def get_excel_rows(file_id):
 
     except Exception as e:
         return {"error": str(e)}, 500
+
 
 @app.route("/generated-docs", methods=["GET"])
 @jwt_required()

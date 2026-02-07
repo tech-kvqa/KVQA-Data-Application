@@ -191,7 +191,7 @@ export default {
 
         const res = await axios.post(
           "https://kvqa-data-application.onrender.com/upload-file",
-          // "http://127.0.0.1:5000/upload-file",
+          // "https://kvqa-data-application.onrender.com/upload-file",
           formData,
           {
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
@@ -266,69 +266,175 @@ export default {
       }
     },
 
-    autoGenerateWord(row) {
-      const manday = String(row.MANDAY).trim();
+    // autoGenerateWord(row) {
+    //   const manday = String(row.MANDAY).trim();
 
-      let templateType = null;
-      if (manday === "7" || manday === "7_manday") {
-        templateType = "7_manday";
-      // } else if (manday === "8" || manday === "8_manday") {
-      //   templateType = "8_manday";
-      // } else if (manday === "9" || manday === "9_manday") {
-      //   templateType = "9_manday";
-      } else {
-        this.message = `⚠️ Cannot generate document: unsupported MANDAY value "${row.MANDAY}"`;
-        return;
-      }
+    //   let templateType = null;
+    //   if (manday === "7" || manday === "7_manday") {
+    //     templateType = "7_manday";
+    //   // } else if (manday === "8" || manday === "8_manday") {
+    //   //   templateType = "8_manday";
+    //   // } else if (manday === "9" || manday === "9_manday") {
+    //   //   templateType = "9_manday";
+    //   } else {
+    //     this.message = `⚠️ Cannot generate document: unsupported MANDAY value "${row.MANDAY}"`;
+    //     return;
+    //   }
 
-      this.generateWord(row.id, templateType);
-    },
+    //   this.generateWord(row.id, templateType);
+    // },
 
-    async generateWord(rowId, templateType) {
-      this.templateDialog = false;
-      this.message = "";
-      this.loading = true;
+    // autoGenerateWord(row) {
+    //   // ISMS is manday-independent
+    //   this.generateWord(row.id);
+    // },
 
-      try {
-        const token = localStorage.getItem("token");
-        const company = localStorage.getItem("company") || "APL";
-        const res = await axios.get(
-          `https://kvqa-data-application.onrender.com/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
-          // `http://127.0.0.1:5000/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
-          { 
-            headers: { Authorization: `Bearer ${token}` }, 
-            responseType: "blob", 
-            params: {
-              template_type: templateType,
-              company: company
-            } 
-          }
-        );
+    // async generateWord(rowId, templateType) {
+    //   this.templateDialog = false;
+    //   this.message = "";
+    //   this.loading = true;
 
-        // Get org name from the row data
-        const row = this.excelRows.find(r => r.id === rowId);
-        const orgName = row?.Organization_Name || `record_${rowId}`;
-        // const safeName = orgName.replace(/[^a-z0-9_\- ]/gi, "_");
-        const safeName = orgName.replace(/[^a-z0-9_\- ]/gi, "_").trim();
+    //   try {
+    //     const token = localStorage.getItem("token");
+    //     const company = localStorage.getItem("company") || "APL";
+    //     // const res = await axios.get(
+    //     //   `http://127.0.0.1:5000/generate-docx-isms/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
+    //     //   // `http://127.0.0.1:5000/generate-docx/${this.selectedFileId}/${rowId}?template_type=${templateType}`,
+    //     //   { 
+    //     //     headers: { Authorization: `Bearer ${token}` }, 
+    //     //     responseType: "blob", 
+    //     //     params: {
+    //     //       template_type: templateType,
+    //     //       company: company
+    //     //     } 
+    //     //   }
+    //     // );
 
-        const url = window.URL.createObjectURL(new Blob([res.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        // link.setAttribute("download", `${safeName}_${templateType}.docx`);
-        link.setAttribute("download", `${safeName}.docx`);
-        document.body.appendChild(link);
-        link.click();
+    //     const res = await axios.get(
+    //       `http://127.0.0.1:5000/generate-docx-isms/${this.selectedFileId}`,
+    //       {
+    //         headers: { Authorization: `Bearer ${token}` },
+    //         responseType: "blob",
+    //         params: {
+    //           company: company
+    //         }
+    //       }
+    //     );
 
-        this.message = `Word document generated for ${orgName} with ${templateType}`;
-        await this.fetchCurrentUserGeneratedRows();
-        await this.fetchExcelRows();
-      } catch (err) {
-        console.error(err.response?.data || err);
-        this.message = "Failed to generate Word document!";
-      } finally {
-        this.loading = false;
-      }
-    },
+    //     // Get org name from the row data
+    //     const row = this.excelRows.find(r => r.id === rowId);
+    //     const orgName = row?.Organization_Name || `record_${rowId}`;
+    //     // const safeName = orgName.replace(/[^a-z0-9_\- ]/gi, "_");
+    //     const safeName = orgName.replace(/[^a-z0-9_\- ]/gi, "_").trim();
+
+    //     const url = window.URL.createObjectURL(new Blob([res.data]));
+    //     const link = document.createElement("a");
+    //     link.href = url;
+    //     // link.setAttribute("download", `${safeName}_${templateType}.docx`);
+    //     link.setAttribute("download", `${safeName}.docx`);
+    //     document.body.appendChild(link);
+    //     link.click();
+
+    //     this.message = `Word document generated for ${orgName} with ${templateType}`;
+    //     await this.fetchCurrentUserGeneratedRows();
+    //     await this.fetchExcelRows();
+    //   } catch (err) {
+    //     console.error(err.response?.data || err);
+    //     this.message = "Failed to generate Word document!";
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
+
+//   async generateWord(rowId) {
+//   this.message = "";
+//   this.loading = true;
+
+//   try {
+//     const token = localStorage.getItem("token");
+//     const company = localStorage.getItem("company") || "CSPL";
+
+//     // Get org name from the table
+//     const row = this.excelRows.find(r => r.id === rowId);
+//     const orgName = row?.["Organization_Name"] || "ISMS_Record";
+//     const safeName = orgName.replace(/[^a-z0-9_\- ]/gi, "_").trim();
+
+//     // Pass org name to backend
+//     const res = await axios.get(
+//       `http://127.0.0.1:5000/generate-docx-isms/${this.selectedFileId}`,
+//       {
+//         headers: { Authorization: `Bearer ${token}` },
+//         responseType: "blob",
+//         params: { company, org_name: orgName } // <-- pass org_name
+//       }
+//     );
+
+//     // Download file
+//     const url = window.URL.createObjectURL(new Blob([res.data]));
+//     const link = document.createElement("a");
+//     link.href = url;
+//     link.setAttribute("download", `${safeName}.docx`);
+//     document.body.appendChild(link);
+//     link.click();
+
+//     this.message = `✅ ISMS document generated for ${orgName}`;
+//     await this.fetchCurrentUserGeneratedRows();
+//     await this.fetchExcelRows();
+
+//   } catch (err) {
+//     console.error(err);
+//     this.message = "Failed to generate ISMS document!";
+//   } finally {
+//     this.loading = false;
+//   }
+// },
+
+  autoGenerateWord(row) {
+    // Compute exact Excel column index: Column A=0 (field names), Column B=1 (first company)
+    const colId = this.excelRows.findIndex(r => r.id === row.id) + 1;
+    this.generateWord(row, colId);
+  },
+
+  async generateWord(row, colId) {
+    this.message = "";
+    this.loading = true;
+
+    try {
+      const token = localStorage.getItem("token");
+      const company = localStorage.getItem("company") || "CSPL";
+
+      const orgName = row?.Organization_Name || "ISMS_Record";
+      const safeName = orgName.replace(/[^a-z0-9_\- ]/gi, "_").trim();
+
+      // Call backend with exact col_id
+      const res = await axios.get(
+        `https://kvqa-data-application.onrender.com/generate-docx-isms/${this.selectedFileId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+          params: { company, org_name: orgName, col_id: colId }
+        }
+      );
+
+      // Download DOCX
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${safeName}.docx`);
+      document.body.appendChild(link);
+      link.click();
+
+      this.message = `✅ ISMS document generated for ${orgName}`;
+      await this.fetchCurrentUserGeneratedRows();
+      await this.fetchExcelRows();
+
+    } catch (err) {
+      console.error(err);
+      this.message = "Failed to generate ISMS document!";
+    } finally {
+      this.loading = false;
+    }
+  },
 
     async generateChecklist(rowId) {
       this.message = "";
@@ -350,7 +456,8 @@ export default {
 
         // Find org name for file naming
         const row = this.excelRows.find(r => r.id === rowId);
-        const orgName = row?.Organization_Name || `record_${rowId}`;
+        // const orgName = row?.Organization_Name || `record_${rowId}`;
+        const orgName = row?.["Organization Name"] || "ISMS_Record";
         console.log(orgName);
         const safeName = orgName.replace(/[^a-z0-9_\- ]/gi, "_").trim();
 
