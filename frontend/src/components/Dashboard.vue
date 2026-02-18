@@ -5,7 +5,7 @@
       <div class="mb-8" style="max-width: 250px;">
         <v-select
           v-model="selectedCompany"
-          :items="['APL', 'CSPL']"
+          :items="['APL', 'CSPL', 'KVR']"
           label="Select Company"
           outlined
           density="compact"
@@ -60,7 +60,7 @@
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="4" v-if="showIMS">
         <v-card
           class="pa-6 d-flex flex-column align-center justify-center text-center rounded-xl cursor-pointer hover-card"
           elevation="4"
@@ -75,7 +75,7 @@
       </v-col>
 
       <!-- ISMS -->
-      <v-col cols="12" md="4" v-if="selectedCompany === 'CSPL'">
+      <v-col cols="12" md="4" v-if="showISMS">
         <v-card
           class="pa-6 d-flex flex-column align-center justify-center text-center rounded-xl cursor-pointer hover-card"
           elevation="4"
@@ -112,6 +112,15 @@ export default {
     return {
       selectedCompany: localStorage.getItem("company") || "APL"
     };
+  },
+  computed: {
+    showIMS() {
+      return this.selectedCompany === "CSPL" || this.selectedCompany === "APL";
+    },
+
+    showISMS() {
+      return this.selectedCompany === "CSPL";
+    }
   },
   methods: {
     logoutUser() {

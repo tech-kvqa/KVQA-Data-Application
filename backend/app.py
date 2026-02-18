@@ -208,6 +208,20 @@ CATEGORY_TEMPLATES = {
         "ISMS":{
             "7_manday": os.path.join(TEMPLATES_DIR, "CSPL/isms_7_manday.docx")
         }
+    },
+    "KVR": {
+        "QMS": {
+            "3_manday": os.path.join(TEMPLATES_DIR, "KVR/QMS_3_MANDAY.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "KVR/QMS_6_MANDAY.docx"),
+        },
+        "EMS": {
+            "4_manday": os.path.join(TEMPLATES_DIR, "KVR/ems_4_manday.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "KVR/ems_6_manday.docx"),
+        },
+        "OHSMS": {
+            "4_manday": os.path.join(TEMPLATES_DIR, "KVR/ohsas_4_manday.docx"),
+            "6_manday": os.path.join(TEMPLATES_DIR, "KVR/ohsas_6_manday.docx"),
+        },
     }, 
 }
 
@@ -350,6 +364,32 @@ CATEGORY_CHECKLIST_TEMPLATES = {
             os.path.join(TEMPLATES_DIR, "CSPL/IMS_checklist_03.docx")
         ],
     },
+    "KVR": {
+        "QMS": [
+            os.path.join(TEMPLATES_DIR, "KVR/QMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/QMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/QMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/QMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/QMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/QMS_checklist_06.docx"),
+        ],
+        "EMS": [
+            os.path.join(TEMPLATES_DIR, "KVR/EMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/EMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/EMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/EMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/EMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/EMS_checklist_06.docx"),
+        ],
+        "OHSMS": [
+            os.path.join(TEMPLATES_DIR, "KVR/OHSMS_checklist.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/OHSMS_checklist_02.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/OHSMS_checklist_03.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/OHSMS_checklist_04.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/OHSMS_checklist_05.docx"),
+            os.path.join(TEMPLATES_DIR, "KVR/OHSMS_checklist_06.docx"),
+        ],
+    }
 }
 
 def make_browser_safe_filename(org_name, category):
