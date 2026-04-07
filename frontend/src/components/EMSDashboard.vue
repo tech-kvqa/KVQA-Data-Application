@@ -67,7 +67,7 @@
             small
             color="success"
             :disabled="item.Status === 'Generated'"
-            @click="autoGenerateWord(item)"
+            @click="openModeDialog(item)"
           >
             Generate
           </v-btn>
@@ -111,6 +111,35 @@
           </span>
         </template>
       </v-data-table>
+
+      <v-dialog v-model="modeDialog" max-width="400">
+        <v-card>
+          <v-card-title>Select Mode</v-card-title>
+
+          <v-card-text class="text-center">
+            <v-btn
+              color="primary"
+              class="ma-2"
+              @click="selectMode('normal')"
+            >
+              Normal
+            </v-btn>
+
+            <v-btn
+              color="deep-purple"
+              class="ma-2"
+              @click="selectMode('remote')"
+            >
+              Remote
+            </v-btn>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn text @click="modeDialog = false">Cancel</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-card>
 
     <!-- Status messages -->
@@ -155,6 +184,10 @@ export default {
     selectedRowId: null,
     selectedFile: null,
     selectedFileId: null,
+    modeDialog: false,
+    selectedMode: "normal",
+    selectedRow: null,
+    selectedTemplateType: null,
     userFiles: [],
     currentUserGeneratedRowIds: [],
     headers: [
@@ -286,7 +319,49 @@ export default {
       this.generateWord(row.id, templateType);
     },
 
-    async generateWord(rowId, templateType) {
+    // New Method
+
+    openModeDialog(row) {
+      const manday = String(row.MANDAY).trim();
+
+      let templateType = null;
+      if (manday === "6" || manday === "6_manday") {
+        templateType = "6_manday";
+      } else if (manday === "4" || manday === "4_manday") {
+        templateType = "4_manday";
+      } else {
+        this.message = `Unsupported MANDAY: ${row.MANDAY}`;
+        return;
+      }
+
+      this.selectedRow = row;
+      this.selectedTemplateType = templateType;
+      this.selectedMode = "normal";
+      this.modeDialog = true;
+    },
+
+    confirmGenerate() {
+      this.modeDialog = false;
+
+      this.generateWord(
+        this.selectedRow.id,
+        this.selectedTemplateType,
+        this.selectedMode
+      );
+    },
+
+    selectMode(mode) {
+      this.modeDialog = false;
+
+      this.generateWord(
+        this.selectedRow.id,
+        this.selectedTemplateType,
+        mode
+      );
+    },
+
+    // async generateWord(rowId, templateType) {
+    async generateWord(rowId, templateType, mode = "normal") {
       this.templateDialog = false;
       this.message = "";
       this.loading = true;
@@ -302,7 +377,8 @@ export default {
             responseType: "blob", 
             params: {
               template_type: templateType,
-              company: company
+              company: company,
+              mode: mode
             } 
           }
         );

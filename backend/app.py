@@ -4,7 +4,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from models import *
 from datetime import timedelta
 import os
-from docxtpl import DocxTemplate, RichText
+from docxtpl import DocxTemplate, RichText, Subdoc
 import pandas as pd
 import traceback
 import numpy as np
@@ -17,6 +17,7 @@ import re
 from werkzeug.utils import secure_filename
 from urllib.parse import quote
 import random
+from docx import Document
 
 load_dotenv()
 
@@ -421,6 +422,7 @@ def generate_docx(file_id, row_id):
         category = user_file.category
         company = request.args.get("company", user_file.company).upper()
         manday_key = request.args.get("template_type")
+        mode = request.args.get("mode", "normal")
 
         if company not in CATEGORY_TEMPLATES:
             return jsonify({"error": f"Invalid company: {company}"}), 400
@@ -471,7 +473,27 @@ def generate_docx(file_id, row_id):
             elif pd.isna(v):
                 row_data[k] = ""
 
+        # doc = DocxTemplate(template_file)
+        # doc.render(row_data)
+
         doc = DocxTemplate(template_file)
+
+        # 🔹 Handle remote section
+        if mode == "remote":
+            remote_template_path = os.path.join(
+                "templates", company, "remote_template.docx"
+            )
+
+            if os.path.exists(remote_template_path):
+                subdoc = doc.new_subdoc(remote_template_path)
+                row_data["remote_section"] = subdoc
+            else:
+                print(f"⚠️ Remote template not found: {remote_template_path}")
+                row_data["remote_section"] = ""
+        else:
+            row_data["remote_section"] = ""
+
+        # Render AFTER setting variable
         doc.render(row_data)
 
         org_name = row_data.get("Organization_Name", f"record_{file_id}_{row_id}")
